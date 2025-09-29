@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Mail, Phone, ArrowRight, Briefcase } from 'lucide-react'
-import { generateUniqueId, validatePhone, validateEmail, validateChineseName, getPhoneValidationError, getNameValidationError, createAssessmentSession } from '@/lib/utils'
+import { generateUniqueId, validatePhone, validateEmail, validateChineseName, getPhoneValidationError, getNameValidationError } from '@/lib/utils'
 
 export default function AssessmentStartPage() {
   const router = useRouter()
@@ -93,8 +93,8 @@ export default function AssessmentStartPage() {
         uniqueId: sessionId
       }
 
-      // 保存会话信息到localStorage
-      createAssessmentSession(sessionData)
+      // 保存会话信息到localStorage - 使用统一的键名
+      localStorage.setItem(`assessmentSession_${sessionId}`, JSON.stringify(sessionData))
 
       // 跳转到评测页面
       router.push(`/assessment/${sessionId}`)
@@ -214,7 +214,7 @@ export default function AssessmentStartPage() {
               )}
             </div>
 
-            {/* 岗位输入 - 改为文本输入框 */}
+            {/* 岗位输入 - 文本输入框 */}
             <div>
               <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
                 <Briefcase className="w-4 h-4 inline mr-2" />
