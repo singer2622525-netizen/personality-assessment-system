@@ -14,7 +14,7 @@ export function isAdminLoggedIn(): boolean {
   return localStorage.getItem('adminLoggedIn') === 'true'
 }
 
-// 获取当前登录的管理员信息
+// 获取当前管理员
 export function getCurrentAdmin(): AdminUser | null {
   if (typeof window === 'undefined') return null
   const adminData = localStorage.getItem('currentAdmin')
@@ -50,42 +50,16 @@ export function requireAuth(): boolean {
 export function createDefaultAdmin(): void {
   if (typeof window === 'undefined') return
   
-  const existingUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]')
-  
-  // 如果没有用户，创建默认管理员
-  if (existingUsers.length === 0) {
-    const defaultAdmin: AdminUser = {
-      id: '1',
-      username: 'admin',
-      email: 'admin@company.com',
-      password: 'admin123',
-      createdAt: new Date().toISOString()
-    }
-    
-    existingUsers.push(defaultAdmin)
-    localStorage.setItem('adminUsers', JSON.stringify(existingUsers))
-  }
-}
-
-// 更新管理员账户信息
-export function updateAdminAccount(userId: string, updates: Partial<AdminUser>): boolean {
-  if (typeof window === 'undefined') return false
-  
-  const existingUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]')
-  const userIndex = existingUsers.findIndex((u: AdminUser) => u.id === userId)
-  
-  if (userIndex >= 0) {
-    existingUsers[userIndex] = { ...existingUsers[userIndex], ...updates }
-    localStorage.setItem('adminUsers', JSON.stringify(existingUsers))
-    
-    // 如果更新的是当前登录用户，更新本地存储
-    const currentAdmin = getCurrentAdmin()
-    if (currentAdmin && currentAdmin.id === userId) {
-      localStorage.setItem('currentAdmin', JSON.stringify(existingUsers[userIndex]))
-    }
-    
-    return true
+  const defaultAdmin: AdminUser = {
+    id: 'admin-001',
+    username: 'admin',
+    email: 'admin@company.com',
+    password: 'admin123456',
+    createdAt: new Date().toISOString()
   }
   
-  return false
+  // 检查是否已存在
+  if (!getCurrentAdmin()) {
+    loginAdmin(defaultAdmin)
+  }
 }
