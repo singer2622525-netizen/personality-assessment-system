@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, LogOut, User, Shield, Clock, Users, FileText, Download } from 'lucide-react'
+import { ArrowLeft, LogOut, User, Shield, Clock, Users, FileText, Download, Eye, Trash2 } from 'lucide-react'
+import { getAssessmentRecords, getAssessmentStats, AssessmentRecord, clearAllAssessmentRecords } from '@/lib/assessment-storage'
 
 interface AdminAuth {
   isAdmin: boolean
@@ -19,6 +20,13 @@ export default function AdminDashboard() {
   const router = useRouter()
   const [adminAuth, setAdminAuth] = useState<AdminAuth | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [assessmentRecords, setAssessmentRecords] = useState<AssessmentRecord[]>([])
+  const [stats, setStats] = useState({
+    total: 0,
+    completed: 0,
+    thisMonth: 0,
+    thisWeek: 0
+  })
 
   useEffect(() => {
     // 检查登录状态
@@ -31,6 +39,15 @@ export default function AdminDashboard() {
     try {
       const parsedAuth = JSON.parse(authData)
       setAdminAuth(parsedAuth)
+      
+      // 加载评测记录
+      const records = getAssessmentRecords()
+      setAssessmentRecords(records)
+      
+      // 加载统计信息
+      const statistics = getAssessmentStats()
+      setStats(statistics)
+      
     } catch (error) {
       console.error('解析认证数据失败:', error)
       router.push('/admin/login')
@@ -42,6 +59,20 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     localStorage.removeItem('adminAuth')
     router.push('/admin/login')
+  }
+
+  const handleClearRecords = () => {
+    if (confirm('确定要清空所有评测记录吗？此操作不可恢复！')) {
+      clearAllAssessmentRecords()
+      setAssessmentRecords([])
+      setStats(getAssessmentStats())
+      alert('所有评测记录已清空')
+    }
+  }
+
+  const handleViewRecord = (record: AssessmentRecord) => {
+    // 跳转到评测结果页面
+    router.push(`/assessment/${record.sessionId}/results`)
   }
 
   const getRoleDisplayName = (role: string) => {
@@ -129,118 +160,66 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 主要内容区域 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-          {/* 用户信息卡片 */}
+        {/* 统计卡片 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
           <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <Shield style={{ width: '24px', height: '24px', color: '#3b82f6', marginRight: '12px' }} />
+              <Users style={{ width: '24px', height: '24px', color: '#3b82f6', marginRight: '12px' }} />
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                账户信息
+                总评测数
               </h2>
             </div>
-            <div style={{ space: '12px' }}>
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>用户名</div>
-                <div style={{ fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>{adminAuth.username}</div>
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>姓名</div>
-                <div style={{ fontSize: '16px', fontWeight: '500', color: '#1f2937' }}>{adminAuth.name}</div>
-              </div>
-              <div style={{ marginBottom: '12px' }}>
-                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>角色</div>
-                <div style={{ 
-                  fontSize: '14px', 
-                  fontWeight: '500', 
-                  color: 'white', 
-                  background: getRoleColor(adminAuth.role),
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  display: 'inline-block'
-                }}>
-                  {getRoleDisplayName(adminAuth.role)}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>登录时间</div>
-                <div style={{ fontSize: '14px', color: '#1f2937' }}>
-                  {new Date(adminAuth.loginTime).toLocaleString('zh-CN')}
-                </div>
-              </div>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#3b82f6' }}>
+              {stats.total}
             </div>
           </div>
 
-          {/* 权限信息卡片 */}
           <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <Users style={{ width: '24px', height: '24px', color: '#059669', marginRight: '12px' }} />
+              <CheckCircle style={{ width: '24px', height: '24px', color: '#059669', marginRight: '12px' }} />
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                权限信息
+                已完成
               </h2>
             </div>
-            <div>
-              {adminAuth.permissions.includes('all') ? (
-                <div style={{ fontSize: '14px', color: '#059669', fontWeight: '500' }}>
-                  拥有所有权限
-                </div>
-              ) : (
-                <div>
-                  {adminAuth.permissions.map((permission, index) => {
-                    const permissionNames: { [key: string]: string } = {
-                      view_assessments: '查看评测结果',
-                      download_reports: '下载报告',
-                      manage_candidates: '管理候选人',
-                      view_statistics: '查看统计信息'
-                    }
-                    return (
-                      <div key={index} style={{ 
-                        fontSize: '14px', 
-                        color: '#1f2937', 
-                        marginBottom: '8px',
-                        padding: '8px 12px',
-                        background: '#f3f4f6',
-                        borderRadius: '6px'
-                      }}>
-                        {permissionNames[permission] || permission}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#059669' }}>
+              {stats.completed}
             </div>
           </div>
 
-          {/* 快速操作卡片 */}
           <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <FileText style={{ width: '24px', height: '24px', color: '#f59e0b', marginRight: '12px' }} />
+              <Clock style={{ width: '24px', height: '24px', color: '#f59e0b', marginRight: '12px' }} />
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                快速操作
+                本月评测
               </h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f59e0b' }}>
+              {stats.thisMonth}
+            </div>
+          </div>
+
+          <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <FileText style={{ width: '24px', height: '24px', color: '#8b5cf6', marginRight: '12px' }} />
+              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
+                本周评测
+              </h2>
+            </div>
+            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#8b5cf6' }}>
+              {stats.thisWeek}
+            </div>
+          </div>
+        </div>
+
+        {/* 评测记录列表 */}
+        <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
+              评测记录
+            </h2>
+            <div style={{ display: 'flex', gap: '12px' }}>
               <button
-                onClick={() => router.push('/')}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  background: '#3b82f6', 
-                  color: 'white', 
-                  border: 'none', 
-                  padding: '12px 16px', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                <Users style={{ width: '16px', height: '16px' }} />
-                查看评测系统
-              </button>
-              <button
-                onClick={() => router.push('/admin/login')}
+                onClick={() => window.location.reload()}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -248,18 +227,96 @@ export default function AdminDashboard() {
                   background: '#6b7280', 
                   color: 'white', 
                   border: 'none', 
-                  padding: '12px 16px', 
+                  padding: '8px 16px', 
                   borderRadius: '8px', 
                   cursor: 'pointer', 
-                  fontSize: '14px',
-                  fontWeight: '500'
+                  fontSize: '14px'
                 }}
               >
-                <Shield style={{ width: '16px', height: '16px' }} />
-                切换账号
+                刷新
               </button>
+              {adminAuth.role === 'super_admin' && (
+                <button
+                  onClick={handleClearRecords}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px', 
+                    background: '#dc2626', 
+                    color: 'white', 
+                    border: 'none', 
+                    padding: '8px 16px', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer', 
+                    fontSize: '14px'
+                  }}
+                >
+                  <Trash2 style={{ width: '16px', height: '16px' }} />
+                  清空记录
+                </button>
+              )}
             </div>
           </div>
+
+          {assessmentRecords.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+              <FileText style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
+              <p style={{ fontSize: '16px', margin: '0' }}>暂无评测记录</p>
+              <p style={{ fontSize: '14px', margin: '8px 0 0' }}>候选人完成评测后，记录将显示在这里</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>姓名</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>职位</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>邮箱</th>
+                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>完成时间</th>
+                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#374151' }}>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assessmentRecords.map((record) => (
+                    <tr key={record.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
+                        {record.candidateName}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
+                        {record.position}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
+                        {record.candidateEmail}
+                      </td>
+                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
+                        {new Date(record.completedAt).toLocaleString('zh-CN')}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <button
+                          onClick={() => handleViewRecord(record)}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '4px', 
+                            background: '#3b82f6', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '6px 12px', 
+                            borderRadius: '6px', 
+                            cursor: 'pointer', 
+                            fontSize: '12px'
+                          }}
+                        >
+                          <Eye style={{ width: '14px', height: '14px' }} />
+                          查看
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* 系统信息 */}
@@ -279,6 +336,10 @@ export default function AdminDashboard() {
             <div>
               <div style={{ color: '#9ca3af', marginBottom: '4px' }}>会话令牌</div>
               <div style={{ fontFamily: 'monospace', fontSize: '12px' }}>{adminAuth.sessionToken.substring(0, 8)}...</div>
+            </div>
+            <div>
+              <div style={{ color: '#9ca3af', marginBottom: '4px' }}>登录时间</div>
+              <div>{new Date(adminAuth.loginTime).toLocaleString('zh-CN')}</div>
             </div>
           </div>
         </div>
