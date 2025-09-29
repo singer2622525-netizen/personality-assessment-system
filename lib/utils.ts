@@ -1,59 +1,20 @@
-// 工具函数
+import { AssessmentSession } from './types'
 
 // 生成唯一ID
 export function generateUniqueId(name: string, phone: string): string {
   const now = new Date()
-  const dateStr = now.toISOString().split('T')[0].replace(/-/g, '') // YYYYMMDD
-  const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '') // HHMMSS
-  const nameHash = name.slice(-2) // 姓名后两位
-  const phoneHash = phone.slice(-4) // 手机号后四位
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+  const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '')
+  const nameHash = name.slice(0, 2)
+  const phoneHash = phone.slice(-4)
   
-  return `${dateStr}${timeStr}${nameHash}${phoneHash}`
+  return `${dateStr}_${timeStr}_${nameHash}_${phoneHash}`
 }
 
-// 格式化日期
-export function formatDate(date: Date): string {
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
-// 验证中文姓名
-export function validateChineseName(name: string): boolean {
-  // 中文姓名：2-4个中文字符，可包含常见中文标点
-  const chineseNameRegex = /^[\u4e00-\u9fa5]{2,4}$/
-  return chineseNameRegex.test(name)
-}
-
-// 验证手机号（中国11位）
+// 验证手机号
 export function validatePhone(phone: string): boolean {
-  // 中国手机号：1开头，第二位3-9，总共11位数字
   const phoneRegex = /^1[3-9]\d{9}$/
   return phoneRegex.test(phone)
-}
-
-// 获取手机号验证错误信息
-export function getPhoneValidationError(phone: string): string {
-  if (!phone) return '请输入手机号码'
-  if (phone.length !== 11) return '手机号码必须是11位数字'
-  if (!/^1/.test(phone)) return '手机号码必须以1开头'
-  if (!/^1[3-9]/.test(phone)) return '手机号码第二位必须是3-9'
-  if (!/^\d+$/.test(phone)) return '手机号码只能包含数字'
-  return '请输入正确的中国手机号码'
-}
-
-// 获取姓名验证错误信息
-export function getNameValidationError(name: string): string {
-  if (!name) return '请输入姓名'
-  if (name.length < 2) return '姓名至少需要2个字符'
-  if (name.length > 4) return '姓名最多4个字符'
-  if (!/^[\u4e00-\u9fa5]+$/.test(name)) return '姓名只能包含中文字符'
-  return '请输入正确的中文姓名'
 }
 
 // 验证邮箱
@@ -62,34 +23,76 @@ export function validateEmail(email: string): boolean {
   return emailRegex.test(email)
 }
 
+// 验证中文姓名
+export function validateChineseName(name: string): boolean {
+  const nameRegex = /^[\u4e00-\u9fa5]{2,4}$/
+  return nameRegex.test(name)
+}
+
+// 获取手机号验证错误信息
+export function getPhoneValidationError(phone: string): string {
+  if (!phone) return '请输入手机号'
+  if (!validatePhone(phone)) return '请输入正确的手机号格式'
+  return ''
+}
+
+// 获取姓名验证错误信息
+export function getNameValidationError(name: string): string {
+  if (!name) return '请输入姓名'
+  if (!validateChineseName(name)) return '请输入2-4个中文字符的姓名'
+  return ''
+}
+
+// 格式化日期
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 // 生成评测链接
 export function generateAssessmentLink(sessionId: string): string {
   if (typeof window === 'undefined') return ''
   return `${window.location.origin}/assessment/${sessionId}`
 }
 
-// 复制到剪贴板
-export async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text)
-    return true
-  } catch (error) {
-    console.error('复制失败:', error)
-    return false
+// 创建评测会话
+export function createAssessmentSession(sessionData: AssessmentSession): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(`assessmentSession_${sessionData.id}`, JSON.stringify(sessionData))
+}
+
+// 获取评测会话
+export function getAssessmentSession(sessionId: string): AssessmentSession | null {
+  if (typeof window === 'undefined') return null
+  const data = localStorage.getItem(`assessmentSession_${sessionId}`)
+  if (data) {
+    try {
+      return JSON.parse(data)
+    } catch (error) {
+      console.error('Failed to parse session data:', error)
+      return null
+    }
+  }
+  return null
+}
+
+// 更新评测会话
+export function updateAssessmentSession(sessionId: string, updates: Partial<AssessmentSession>): void {
+  if (typeof window === 'undefined') return
+  const session = getAssessmentSession(sessionId)
+  if (session) {
+    const updatedSession = { ...session, ...updates }
+    localStorage.setItem(`assessmentSession_${sessionId}`, JSON.stringify(updatedSession))
   }
 }
 
-// 显示退出确认对话框
-export function showExitConfirmation(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const confirmed = window.confirm(
-      '您已完成评测，感谢您的参与！\n\n' +
-      '评测结果已保存，您可以：\n' +
-      '• 查看详细结果报告\n' +
-      '• 返回首页\n' +
-      '• 关闭页面\n\n' +
-      '确定要退出吗？'
-    )
-    resolve(confirmed)
-  })
+// 保存评测结果
+export function saveAssessmentSession(session: AssessmentSession): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(`assessmentSession_${session.id}`, JSON.stringify(session))
 }
