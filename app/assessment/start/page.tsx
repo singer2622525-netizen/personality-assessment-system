@@ -65,7 +65,7 @@ export default function AssessmentStartPage() {
 
     // 验证岗位
     if (!formData.position) {
-      newErrors.position = '请选择应聘岗位'
+      newErrors.position = '请输入应聘岗位'
       hasError = true
     }
 
@@ -106,7 +106,7 @@ export default function AssessmentStartPage() {
     }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData({
       ...formData,
@@ -214,30 +214,23 @@ export default function AssessmentStartPage() {
               )}
             </div>
 
-            {/* 岗位选择 */}
+            {/* 岗位输入 - 改为文本输入框 */}
             <div>
               <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
                 <Briefcase className="w-4 h-4 inline mr-2" />
                 应聘岗位 *
               </label>
-              <select
+              <input
+                type="text"
                 id="position"
                 name="position"
                 value={formData.position}
                 onChange={handleInputChange}
+                placeholder="请输入您应聘的岗位名称"
                 className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   errors.position ? 'border-red-500' : 'border-gray-300'
                 }`}
-              >
-                <option value="">请选择应聘岗位</option>
-                <option value="销售工程师">销售工程师</option>
-                <option value="机械设计师">机械设计师</option>
-                <option value="事业部领导">事业部领导</option>
-                <option value="文职类岗位">文职类岗位</option>
-                <option value="技术工程师">技术工程师</option>
-                <option value="项目经理">项目经理</option>
-                <option value="其他">其他</option>
-              </select>
+              />
               {errors.position && (
                 <p className="mt-1 text-sm text-red-600">{errors.position}</p>
               )}
