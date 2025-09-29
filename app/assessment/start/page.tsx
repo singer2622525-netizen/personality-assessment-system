@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { User, Mail, Phone, ArrowRight, Briefcase } from 'lucide-react'
-import { generateUniqueId, validatePhone, validateEmail, validateChineseName, getPhoneValidationError, getNameValidationError } from '@/lib/utils'
+import { generateUniqueId, validatePhone, validateEmail, validateChineseName, getPhoneValidationError, getNameValidationError, createAssessmentSession } from '@/lib/utils'
 
 export default function AssessmentStartPage() {
   const router = useRouter()
@@ -21,72 +21,64 @@ export default function AssessmentStartPage() {
     position: ''
   })
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     
-    // 清除对应字段的错误
-    if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }))
-    }
-  }
-
-  const validateForm = () => {
-    const newErrors = {
+    // 重置错误信息
+    setErrors({
       name: '',
       email: '',
       phone: '',
       position: ''
-    }
+    })
+    
+    // 验证所有字段
+    const newErrors = { name: '', email: '', phone: '', position: '' }
+    let hasError = false
 
     // 验证姓名
-    if (!formData.name.trim()) {
+    if (!formData.name) {
       newErrors.name = '请输入姓名'
+      hasError = true
     } else if (!validateChineseName(formData.name)) {
       newErrors.name = getNameValidationError(formData.name)
+      hasError = true
     }
 
     // 验证邮箱
-    if (!formData.email.trim()) {
+    if (!formData.email) {
       newErrors.email = '请输入邮箱'
+      hasError = true
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = '请输入有效的邮箱地址'
+      newErrors.email = '请输入正确的邮箱地址'
+      hasError = true
     }
 
     // 验证手机号
-    if (!formData.phone.trim()) {
-      newErrors.phone = '请输入手机号'
+    if (!formData.phone) {
+      newErrors.phone = '请输入手机号码'
+      hasError = true
     } else if (!validatePhone(formData.phone)) {
       newErrors.phone = getPhoneValidationError(formData.phone)
+      hasError = true
     }
 
-    // 验证职位
-    if (!formData.position.trim()) {
-      newErrors.position = '请输入应聘职位'
+    // 验证岗位
+    if (!formData.position) {
+      newErrors.position = '请选择应聘岗位'
+      hasError = true
     }
 
-    setErrors(newErrors)
-    return !Object.values(newErrors).some(error => error !== '')
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
+    if (hasError) {
+      setErrors(newErrors)
       return
     }
 
     setIsLoading(true)
-
+    
     try {
-      // 生成唯一的会话ID
-      const sessionId = generateUniqueId(formData.name.trim(), formData.phone.trim())
+      // 生成会话ID和唯一ID
+      const sessionId = generateUniqueId(formData.name, formData.phone)
       
       // 创建会话数据
       const sessionData = {
@@ -95,151 +87,159 @@ export default function AssessmentStartPage() {
         candidateEmail: formData.email.trim(),
         candidatePhone: formData.phone.trim(),
         position: formData.position.trim(),
+        status: 'in_progress' as 'in_progress',
         answers: [],
-        status: 'pending' as const,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        uniqueId: sessionId
       }
 
-      // 保存到 localStorage
-      localStorage.setItem(`assessment_session_${sessionId}`, JSON.stringify(sessionData))
-      
+      // 保存会话信息到localStorage
+      createAssessmentSession(sessionData)
+
       // 跳转到评测页面
       router.push(`/assessment/${sessionId}`)
-      
     } catch (error) {
-      console.error('创建评测会话失败:', error)
-      alert('创建评测会话失败，请重试')
+      console.error('Failed to start assessment:', error)
+      alert('启动评测失败，请稍后再试。')
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData({
+      ...formData,
+      [name]: value
+    })
+    
+    // 清除对应字段的错误信息
+    if (errors[name as keyof typeof errors]) {
+      setErrors({
+        ...errors,
+        [name]: ''
+      })
+    }
+  }
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%)' }}>
-      <div style={{ width: '100%', maxWidth: '500px' }}>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
         {/* 返回按钮 */}
-        <div style={{ marginBottom: '24px' }}>
+        <div className="mb-6">
           <button
             onClick={() => router.push('/')}
-            style={{ display: 'flex', alignItems: 'center', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+            className="flex items-center text-gray-600 hover:text-gray-900"
           >
-            <ArrowRight style={{ width: '16px', height: '16px', marginRight: '8px', transform: 'rotate(180deg)' }} />
+            <ArrowRight className="w-4 h-4 mr-2 rotate-180" />
             返回首页
           </button>
         </div>
 
         {/* 表单卡片 */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '32px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ width: '64px', height: '64px', background: 'linear-gradient(135deg, #f97316 0%, #eab308 100%)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-              <User style={{ width: '32px', height: '32px', color: 'white' }} />
-            </div>
-            <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
-              个人信息填写
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              5型人格评测
             </h1>
-            <p style={{ fontSize: '14px', color: '#6b7280' }}>
-              请填写您的基本信息，我们将为您生成个性化的人格评测报告
+            <p className="text-gray-600">
+              请填写您的基本信息，开始专业的人格评测
             </p>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            {/* 姓名 */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* 姓名输入 */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+                <User className="w-4 h-4 inline mr-2" />
                 姓名 *
               </label>
-              <div style={{ position: 'relative' }}>
-                <User style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#9ca3af' }} />
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="请输入您的真实姓名"
-                  style={{ width: '100%', padding: '12px 12px 12px 44px', border: `1px solid ${errors.name ? '#dc2626' : '#d1d5db'}`, borderRadius: '8px', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = errors.name ? '#dc2626' : '#d1d5db'}
-                />
-              </div>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="请输入您的姓名"
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.name ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
               {errors.name && (
-                <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
-                  {errors.name}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
               )}
             </div>
 
-            {/* 邮箱 */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            {/* 邮箱输入 */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <Mail className="w-4 h-4 inline mr-2" />
                 邮箱 *
               </label>
-              <div style={{ position: 'relative' }}>
-                <Mail style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#9ca3af' }} />
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="请输入您的邮箱地址"
-                  style={{ width: '100%', padding: '12px 12px 12px 44px', border: `1px solid ${errors.email ? '#dc2626' : '#d1d5db'}`, borderRadius: '8px', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = errors.email ? '#dc2626' : '#d1d5db'}
-                />
-              </div>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="请输入您的邮箱"
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
               {errors.email && (
-                <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
-                  {errors.email}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
 
-            {/* 手机号 */}
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
+            {/* 手机号输入 */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                <Phone className="w-4 h-4 inline mr-2" />
                 手机号 *
               </label>
-              <div style={{ position: 'relative' }}>
-                <Phone style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#9ca3af' }} />
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="请输入您的手机号码"
-                  style={{ width: '100%', padding: '12px 12px 12px 44px', border: `1px solid ${errors.phone ? '#dc2626' : '#d1d5db'}`, borderRadius: '8px', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = errors.phone ? '#dc2626' : '#d1d5db'}
-                />
-              </div>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="请输入您的手机号"
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.phone ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
               {errors.phone && (
-                <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
-                  {errors.phone}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
               )}
             </div>
 
-            {/* 应聘职位 */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '8px' }}>
-                应聘职位 *
+            {/* 岗位选择 */}
+            <div>
+              <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
+                <Briefcase className="w-4 h-4 inline mr-2" />
+                应聘岗位 *
               </label>
-              <div style={{ position: 'relative' }}>
-                <Briefcase style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: '#9ca3af' }} />
-                <input
-                  type="text"
-                  name="position"
-                  value={formData.position}
-                  onChange={handleInputChange}
-                  placeholder="请输入您应聘的职位"
-                  style={{ width: '100%', padding: '12px 12px 12px 44px', border: `1px solid ${errors.position ? '#dc2626' : '#d1d5db'}`, borderRadius: '8px', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = errors.position ? '#dc2626' : '#d1d5db'}
-                />
-              </div>
+              <select
+                id="position"
+                name="position"
+                value={formData.position}
+                onChange={handleInputChange}
+                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.position ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="">请选择应聘岗位</option>
+                <option value="销售工程师">销售工程师</option>
+                <option value="机械设计师">机械设计师</option>
+                <option value="事业部领导">事业部领导</option>
+                <option value="文职类岗位">文职类岗位</option>
+                <option value="技术工程师">技术工程师</option>
+                <option value="项目经理">项目经理</option>
+                <option value="其他">其他</option>
+              </select>
               {errors.position && (
-                <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '4px' }}>
-                  {errors.position}
-                </p>
+                <p className="mt-1 text-sm text-red-600">{errors.position}</p>
               )}
             </div>
 
@@ -247,42 +247,30 @@ export default function AssessmentStartPage() {
             <button
               type="submit"
               disabled={isLoading}
-              style={{ 
-                width: '100%', 
-                background: isLoading ? '#9ca3af' : 'linear-gradient(135deg, #f97316 0%, #eab308 100%)', 
-                color: 'white', 
-                padding: '12px 24px', 
-                borderRadius: '8px', 
-                border: 'none', 
-                cursor: isLoading ? 'not-allowed' : 'pointer', 
-                fontSize: '16px', 
-                fontWeight: '500',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px'
-              }}
+              className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? '创建评测中...' : (
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  启动中...
+                </>
+              ) : (
                 <>
                   开始评测
-                  <ArrowRight style={{ width: '16px', height: '16px' }} />
+                  <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
             </button>
           </form>
 
-          {/* 提示信息 */}
-          <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-              评测说明：
-            </h3>
-            <ul style={{ fontSize: '12px', color: '#6b7280', lineHeight: '1.5', margin: '0', paddingLeft: '16px' }}>
-              <li>评测包含50道题目，预计用时10-15分钟</li>
-              <li>请根据您的真实情况选择最符合的答案</li>
-              <li>评测结果将用于招聘决策参考</li>
-              <li>您的个人信息将被严格保密</li>
+          {/* 说明信息 */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-md">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">评测说明：</h3>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• 评测包含50道题目，预计用时10-15分钟</li>
+              <li>• 请根据您的真实情况选择最符合的答案</li>
+              <li>• 评测结果将用于招聘决策参考</li>
+              <li>• 评测过程中可以随时保存进度</li>
             </ul>
           </div>
         </div>
