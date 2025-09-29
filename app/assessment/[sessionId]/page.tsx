@@ -35,10 +35,10 @@ export default function AssessmentPage() {
   useEffect(() => {
     // 保存进度到localStorage
     if (session) {
-      const updatedSession = {
+      const updatedSession: AssessmentSession = {
         ...session,
         answers,
-        status: answers.length === QUESTIONS.length ? 'completed' : 'in_progress'
+        status: (answers.length === QUESTIONS.length ? 'completed' : 'in_progress') as 'pending' | 'in_progress' | 'completed'
       }
       localStorage.setItem('assessmentSession', JSON.stringify(updatedSession))
       // 避免无限循环，只在状态真正改变时更新
