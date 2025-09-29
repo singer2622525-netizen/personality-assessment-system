@@ -6,7 +6,6 @@ import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
 import { QUESTIONS } from '@/lib/types'
 import { Answer, AssessmentSession } from '@/lib/types'
 import { calculatePersonalityScores } from '@/lib/assessment'
-import { getAssessmentSession, updateAssessmentSession } from '@/lib/utils'
 
 export default function AssessmentPage() {
   const router = useRouter()
@@ -23,9 +22,10 @@ export default function AssessmentPage() {
   const progress = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100
 
   useEffect(() => {
-    // 从localStorage加载会话信息
-    const sessionData = getAssessmentSession(sessionId)
-    if (sessionData) {
+    // 从localStorage加载会话信息 - 使用正确的键名
+    const savedSession = localStorage.getItem(`assessmentSession_${sessionId}`)
+    if (savedSession) {
+      const sessionData = JSON.parse(savedSession)
       setSession(sessionData)
       setAnswers(sessionData.answers || [])
     }
@@ -33,14 +33,14 @@ export default function AssessmentPage() {
   }, [sessionId])
 
   useEffect(() => {
-    // 保存进度到localStorage
+    // 保存进度到localStorage - 使用正确的键名
     if (session) {
       const updatedSession: AssessmentSession = {
         ...session,
         answers,
         status: (answers.length === QUESTIONS.length ? 'completed' : 'in_progress') as 'pending' | 'in_progress' | 'completed'
       }
-      updateAssessmentSession(sessionId, updatedSession)
+      localStorage.setItem(`assessmentSession_${sessionId}`, JSON.stringify(updatedSession))
       setSession(updatedSession)
     }
   }, [answers, sessionId])
@@ -105,7 +105,8 @@ export default function AssessmentPage() {
         completedAt: new Date().toISOString()
       }
 
-      updateAssessmentSession(sessionId, completedSession)
+      // 保存到localStorage - 使用正确的键名
+      localStorage.setItem(`assessmentSession_${sessionId}`, JSON.stringify(completedSession))
       
       // 跳转到结果页面
       router.push(`/assessment/${sessionId}/results`)
@@ -130,6 +131,7 @@ export default function AssessmentPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">会话不存在</h1>
+          <p className="text-gray-600 mb-4">请重新开始评测</p>
           <button
             onClick={() => router.push('/assessment/start')}
             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
@@ -166,6 +168,15 @@ export default function AssessmentPage() {
       {/* 主要内容 */}
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-lg p-8">
+          {/* 候选人信息 */}
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-900 mb-2">候选人信息</h3>
+            <div className="text-sm text-blue-800">
+              <p><strong>姓名：</strong>{session.candidateName}</p>
+              <p><strong>岗位：</strong>{session.position}</p>
+            </div>
+          </div>
+
           {/* 题目 */}
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
