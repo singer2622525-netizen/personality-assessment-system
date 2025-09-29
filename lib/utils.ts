@@ -1,3 +1,10 @@
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 // 生成唯一ID - 简化版本，避免URL问题
 export function generateUniqueId(name: string, phone: string): string {
   const timestamp = Date.now().toString(36)
