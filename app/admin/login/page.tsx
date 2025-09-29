@@ -182,22 +182,17 @@ export default function AdminLoginPage() {
             </button>
           </form>
 
-          {/* 账号信息提示 */}
+          {/* 安全提示 */}
           <div style={{ marginTop: '24px', padding: '16px', background: '#f8fafc', borderRadius: '8px' }}>
-            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
-              可用账号：
+            <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+              安全提示：
             </h3>
-            <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: '1.5' }}>
-              <div style={{ marginBottom: '4px' }}>
-                <strong>超级管理员：</strong> admin / admin123456
-              </div>
-              <div style={{ marginBottom: '4px' }}>
-                <strong>HR管理员：</strong> hr / hr123456
-              </div>
-              <div>
-                <strong>部门经理：</strong> manager / manager123456
-              </div>
-            </div>
+            <ul style={{ fontSize: '12px', color: '#6b7280', lineHeight: '1.5', margin: '0', paddingLeft: '16px' }}>
+              <li>请使用管理员提供的账号密码登录</li>
+              <li>请勿在公共场所输入密码</li>
+              <li>登录后请及时退出</li>
+              <li>如有问题请联系系统管理员</li>
+            </ul>
           </div>
         </div>
       </div>
