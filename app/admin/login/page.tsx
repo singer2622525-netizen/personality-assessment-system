@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Lock, User, Eye, EyeOff } from 'lucide-react'
-import { ADMIN_ACCOUNTS, validatePassword, generateSessionToken } from '@/lib/admin-config'
+import { loginAdmin, createDefaultAdmin } from '@/lib/auth'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -30,41 +30,28 @@ export default function AdminLoginPage() {
     setError('')
     
     try {
-      // 查找用户
-      const user = ADMIN_ACCOUNTS.find(account => account.username === formData.username)
+      // 创建默认管理员账户（如果不存在）
+      createDefaultAdmin()
       
-      if (!user) {
-        setError('用户名不存在')
-        setIsLoading(false)
-        return
+      // 简单的用户名密码验证
+      if (formData.username === 'admin' && formData.password === 'admin123456') {
+        // 创建管理员用户对象
+        const adminUser = {
+          id: 'admin-001',
+          username: 'admin',
+          email: 'admin@company.com',
+          password: 'admin123456',
+          createdAt: new Date().toISOString()
+        }
+        
+        // 登录
+        loginAdmin(adminUser)
+        
+        // 跳转到管理后台
+        router.push('/admin/dashboard')
+      } else {
+        setError('用户名或密码错误')
       }
-      
-      // 验证密码
-      if (!validatePassword(formData.password, user.password)) {
-        setError('密码错误')
-        setIsLoading(false)
-        return
-      }
-      
-      // 生成会话令牌
-      const sessionToken = generateSessionToken()
-      
-      // 保存登录信息到 localStorage
-      const loginData = {
-        isAdmin: true,
-        userId: user.id,
-        username: user.username,
-        name: user.name,
-        role: user.role,
-        permissions: user.permissions,
-        sessionToken,
-        loginTime: new Date().toISOString()
-      }
-      
-      localStorage.setItem('adminAuth', JSON.stringify(loginData))
-      
-      // 跳转到管理后台
-      router.push('/admin/dashboard')
       
     } catch (error) {
       console.error('登录错误:', error)
