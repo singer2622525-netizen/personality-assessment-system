@@ -2,345 +2,346 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, LogOut, User, Shield, Clock, Users, FileText, Download, Eye, Trash2, CheckCircle } from 'lucide-react'
-import { getAssessmentRecords, getAssessmentStats, AssessmentRecord, clearAllAssessmentRecords } from '@/lib/assessment-storage'
-
-interface AdminAuth {
-  isAdmin: boolean
-  userId: string
-  username: string
-  name: string
-  role: string
-  permissions: string[]
-  sessionToken: string
-  loginTime: string
-}
+import { requireAuth, getCurrentAdmin, logoutAdmin } from '@/lib/auth'
+import { 
+  Users, 
+  FileText, 
+  BarChart3, 
+  Plus, 
+  Eye, 
+  Download,
+  Search,
+  Filter,
+  Calendar,
+  TrendingUp
+} from 'lucide-react'
+import { AssessmentSession } from '@/lib/types'
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [adminAuth, setAdminAuth] = useState<AdminAuth | null>(null)
+  const [sessions, setSessions] = useState<AssessmentSession[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [assessmentRecords, setAssessmentRecords] = useState<AssessmentRecord[]>([])
-  const [stats, setStats] = useState({
-    total: 0,
-    completed: 0,
-    thisMonth: 0,
-    thisWeek: 0
-  })
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all')
+  const [currentAdmin, setCurrentAdmin] = useState<any>(null)
 
   useEffect(() => {
-    // 检查登录状态
-    const authData = localStorage.getItem('adminAuth')
-    if (!authData) {
-      router.push('/admin/login')
+    // 检查认证状态
+    if (!requireAuth()) {
       return
     }
+    
+    // 获取当前管理员信息
+    const admin = getCurrentAdmin()
+    setCurrentAdmin(admin)
+    
+    // 加载数据
+    loadSessions()
+  }, [])
 
-    try {
-      const parsedAuth = JSON.parse(authData)
-      setAdminAuth(parsedAuth)
+  const loadSessions = () => {
+    // 从localStorage加载所有会话
+    const allSessions: AssessmentSession[] = []
+    
+    // 检查所有localStorage键
+    console.log('检查localStorage中的所有键:')
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      console.log(`键 ${i}: ${key}`)
       
-      // 加载评测记录
-      const records = getAssessmentRecords()
-      setAssessmentRecords(records)
-      
-      // 加载统计信息
-      const statistics = getAssessmentStats()
-      setStats(statistics)
-      
-    } catch (error) {
-      console.error('解析认证数据失败:', error)
-      router.push('/admin/login')
-    } finally {
-      setIsLoading(false)
+      if (key?.startsWith('assessmentTask_') || key === 'assessmentSession') {
+        try {
+          const session = JSON.parse(localStorage.getItem(key) || '{}')
+          console.log(`加载会话数据:`, session)
+          allSessions.push(session)
+        } catch (error) {
+          console.error('解析会话数据失败:', error)
+        }
+      }
     }
-  }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem('adminAuth')
-    router.push('/admin/login')
+    
+    console.log(`总共加载了 ${allSessions.length} 个会话`)
+    setSessions(allSessions)
+    setIsLoading(false)
   }
 
-  const handleClearRecords = () => {
-    if (confirm('确定要清空所有评测记录吗？此操作不可恢复！')) {
-      clearAllAssessmentRecords()
-      setAssessmentRecords([])
-      setStats(getAssessmentStats())
-      alert('所有评测记录已清空')
+  const filteredSessions = sessions.filter(session => {
+    const matchesSearch = session.candidateName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         session.candidateEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         session.position?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesStatus = filterStatus === 'all' || session.status === filterStatus
+    
+    return matchesSearch && matchesStatus
+  })
+
+  const handleCreateAssessment = () => {
+    router.push('/admin/create')
+  }
+
+  const handleViewResults = (sessionId: string) => {
+    router.push(`/assessment/${sessionId}/results`)
+  }
+
+  const handleDownloadResults = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId)
+    if (session && session.results) {
+      // 这里可以添加下载功能
+      console.log('下载结果:', session)
     }
   }
 
-  const handleViewRecord = (record: AssessmentRecord) => {
-    // 跳转到评测结果页面
-    router.push(`/assessment/${record.sessionId}/results`)
-  }
-
-  const getRoleDisplayName = (role: string) => {
-    const roleNames: { [key: string]: string } = {
-      super_admin: '超级管理员',
-      hr_admin: 'HR管理员',
-      manager: '部门经理',
-      viewer: '查看者'
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return '待评测'
+      case 'in_progress':
+        return '评测中'
+      case 'completed':
+        return '已完成'
+      default:
+        return '未知'
     }
-    return roleNames[role] || role
-  }
-
-  const getRoleColor = (role: string) => {
-    const colors: { [key: string]: string } = {
-      super_admin: '#dc2626',
-      hr_admin: '#2563eb',
-      manager: '#059669',
-      viewer: '#6b7280'
-    }
-    return colors[role] || '#6b7280'
   }
 
   if (isLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)' }}>
-        <div style={{ color: 'white', fontSize: '18px' }}>加载中...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
       </div>
     )
   }
 
-  if (!adminAuth) {
-    return null
-  }
-
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)', padding: '16px' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* 头部导航 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <button
-              onClick={() => router.push('/')}
-              style={{ display: 'flex', alignItems: 'center', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', marginRight: '24px' }}
-            >
-              <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              返回首页
-            </button>
-            <h1 style={{ color: 'white', fontSize: '24px', fontWeight: '600', margin: '0' }}>
-              管理后台
-            </h1>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {/* 用户信息 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 255, 255, 0.1)', padding: '8px 16px', borderRadius: '8px' }}>
-              <User style={{ width: '20px', height: '20px', color: '#9ca3af' }} />
-              <div>
-                <div style={{ color: 'white', fontSize: '14px', fontWeight: '500' }}>
-                  {adminAuth.name}
-                </div>
-                <div style={{ color: '#9ca3af', fontSize: '12px' }}>
-                  {adminAuth.username}
-                </div>
-              </div>
-              <div style={{ 
-                background: getRoleColor(adminAuth.role), 
-                color: 'white', 
-                padding: '2px 8px', 
-                borderRadius: '4px', 
-                fontSize: '12px',
-                fontWeight: '500'
-              }}>
-                {getRoleDisplayName(adminAuth.role)}
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* 头部 */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">评测管理后台</h1>
+              <p className="text-gray-600 mt-1">
+                欢迎，{currentAdmin?.username} | 管理候选人评测任务和结果
+              </p>
             </div>
-            
-            {/* 退出按钮 */}
-            <button
-              onClick={handleLogout}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#dc2626', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}
-            >
-              <LogOut style={{ width: '16px', height: '16px' }} />
-              退出登录
-            </button>
-          </div>
-        </div>
-
-        {/* 统计卡片 */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-          <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <Users style={{ width: '24px', height: '24px', color: '#3b82f6', marginRight: '12px' }} />
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                总评测数
-              </h2>
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#3b82f6' }}>
-              {stats.total}
-            </div>
-          </div>
-
-          <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <CheckCircle style={{ width: '24px', height: '24px', color: '#059669', marginRight: '12px' }} />
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                已完成
-              </h2>
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#059669' }}>
-              {stats.completed}
-            </div>
-          </div>
-
-          <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <Clock style={{ width: '24px', height: '24px', color: '#f59e0b', marginRight: '12px' }} />
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                本月评测
-              </h2>
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#f59e0b' }}>
-              {stats.thisMonth}
-            </div>
-          </div>
-
-          <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
-              <FileText style={{ width: '24px', height: '24px', color: '#8b5cf6', marginRight: '12px' }} />
-              <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-                本周评测
-              </h2>
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#8b5cf6' }}>
-              {stats.thisWeek}
-            </div>
-          </div>
-        </div>
-
-        {/* 评测记录列表 */}
-        <div style={{ background: 'white', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937', margin: '0' }}>
-              评测记录
-            </h2>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div className="flex space-x-3">
               <button
-                onClick={() => window.location.reload()}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px', 
-                  background: '#6b7280', 
-                  color: 'white', 
-                  border: 'none', 
-                  padding: '8px 16px', 
-                  borderRadius: '8px', 
-                  cursor: 'pointer', 
-                  fontSize: '14px'
-                }}
+                onClick={() => router.push('/')}
+                className="flex items-center px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                刷新
+                返回首页
               </button>
-              {adminAuth.role === 'super_admin' && (
-                <button
-                  onClick={handleClearRecords}
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    background: '#dc2626', 
-                    color: 'white', 
-                    border: 'none', 
-                    padding: '8px 16px', 
-                    borderRadius: '8px', 
-                    cursor: 'pointer', 
-                    fontSize: '14px'
-                  }}
-                >
-                  <Trash2 style={{ width: '16px', height: '16px' }} />
-                  清空记录
-                </button>
-              )}
+              <button
+                onClick={() => router.push('/admin/compare')}
+                className="flex items-center px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                对比分析
+              </button>
+              <button
+                onClick={() => router.push('/admin/statistics')}
+                className="flex items-center px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                统计分析
+              </button>
+              <button
+                onClick={handleCreateAssessment}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                创建评测
+              </button>
+              <button
+                onClick={() => {
+                  logoutAdmin()
+                  router.push('/admin/login')
+                }}
+                className="flex items-center px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50"
+              >
+                退出登录
+              </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          {assessmentRecords.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
-              <FileText style={{ width: '48px', height: '48px', margin: '0 auto 16px', opacity: 0.5 }} />
-              <p style={{ fontSize: '16px', margin: '0' }}>暂无评测记录</p>
-              <p style={{ fontSize: '14px', margin: '8px 0 0' }}>候选人完成评测后，记录将显示在这里</p>
+      {/* 主要内容 */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* 统计卡片 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Users className="w-8 h-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">总评测人数</p>
+                <p className="text-2xl font-bold text-gray-900">{sessions.length}</p>
+              </div>
             </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>姓名</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>职位</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>邮箱</th>
-                    <th style={{ padding: '12px', textAlign: 'left', fontSize: '14px', fontWeight: '600', color: '#374151' }}>完成时间</th>
-                    <th style={{ padding: '12px', textAlign: 'center', fontSize: '14px', fontWeight: '600', color: '#374151' }}>操作</th>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <FileText className="w-8 h-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">已完成</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.filter(s => s.status === 'completed').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Calendar className="w-8 h-8 text-yellow-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">进行中</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.filter(s => s.status === 'in_progress').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <TrendingUp className="w-8 h-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">本月新增</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {sessions.filter(s => {
+                    const now = new Date()
+                    const sessionDate = new Date(s.createdAt)
+                    return sessionDate.getMonth() === now.getMonth() && 
+                           sessionDate.getFullYear() === now.getFullYear()
+                  }).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 搜索和筛选 */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="p-6">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="搜索候选人姓名、邮箱或岗位..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <Filter className="w-5 h-5 text-gray-400 mr-2" />
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value as any)}
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="all">全部状态</option>
+                    <option value="pending">待评测</option>
+                    <option value="in_progress">评测中</option>
+                    <option value="completed">已完成</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 评测记录表格 */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">评测记录</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    候选人信息
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    应聘岗位
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    状态
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    创建时间
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredSessions.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      {sessions.length === 0 ? '暂无评测记录' : '没有找到匹配的记录'}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {assessmentRecords.map((record) => (
-                    <tr key={record.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#1f2937', fontWeight: '500' }}>
-                        {record.candidateName}
+                ) : (
+                  filteredSessions.map((session) => (
+                    <tr key={session.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {session.candidateName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {session.candidateEmail}
+                          </div>
+                        </div>
                       </td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
-                        {record.position}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{session.position}</div>
                       </td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
-                        {record.candidateEmail}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          session.status === 'completed' 
+                            ? 'bg-green-100 text-green-800'
+                            : session.status === 'in_progress'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {getStatusText(session.status)}
+                        </span>
                       </td>
-                      <td style={{ padding: '12px', fontSize: '14px', color: '#6b7280' }}>
-                        {new Date(record.completedAt).toLocaleString('zh-CN')}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(session.createdAt).toLocaleDateString('zh-CN')}
                       </td>
-                      <td style={{ padding: '12px', textAlign: 'center' }}>
-                        <button
-                          onClick={() => handleViewRecord(record)}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '4px', 
-                            background: '#3b82f6', 
-                            color: 'white', 
-                            border: 'none', 
-                            padding: '6px 12px', 
-                            borderRadius: '6px', 
-                            cursor: 'pointer', 
-                            fontSize: '12px'
-                          }}
-                        >
-                          <Eye style={{ width: '14px', height: '14px' }} />
-                          查看
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleViewResults(session.id)}
+                            className="text-blue-600 hover:text-blue-900 flex items-center"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            查看
+                          </button>
+                          {session.status === 'completed' && (
+                            <button
+                              onClick={() => handleDownloadResults(session.id)}
+                              className="text-green-600 hover:text-green-900 flex items-center"
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              下载
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* 系统信息 */}
-        <div style={{ marginTop: '32px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '12px', padding: '24px' }}>
-          <h3 style={{ color: 'white', fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>
-            系统信息
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', color: '#d1d5db', fontSize: '14px' }}>
-            <div>
-              <div style={{ color: '#9ca3af', marginBottom: '4px' }}>系统版本</div>
-              <div>v1.0.0</div>
-            </div>
-            <div>
-              <div style={{ color: '#9ca3af', marginBottom: '4px' }}>部署平台</div>
-              <div>Vercel</div>
-            </div>
-            <div>
-              <div style={{ color: '#9ca3af', marginBottom: '4px' }}>会话令牌</div>
-              <div style={{ fontFamily: 'monospace', fontSize: '12px' }}>{adminAuth.sessionToken.substring(0, 8)}...</div>
-            </div>
-            <div>
-              <div style={{ color: '#9ca3af', marginBottom: '4px' }}>登录时间</div>
-              <div>{new Date(adminAuth.loginTime).toLocaleString('zh-CN')}</div>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
