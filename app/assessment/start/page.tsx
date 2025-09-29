@@ -86,7 +86,7 @@ export default function AssessmentStartPage() {
 
     try {
       // 生成唯一的会话ID
-      const sessionId = generateUniqueId()
+      const sessionId = generateUniqueId(formData.name.trim(), formData.phone.trim())
       
       // 创建会话数据
       const sessionData = {
