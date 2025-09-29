@@ -9,11 +9,23 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<'admin' | 'candidate'>('admin')
 
   const handleAdminLogin = () => {
-    router.push('/admin/login')
+    console.log('Admin login clicked')
+    try {
+      router.push('/admin/login')
+      console.log('Router push successful')
+    } catch (error) {
+      console.error('Router push error:', error)
+    }
   }
 
   const handleCandidateAccess = () => {
-    router.push('/assessment/start')
+    console.log('Candidate access clicked')
+    try {
+      router.push('/assessment/start')
+      console.log('Router push successful')
+    } catch (error) {
+      console.error('Router push error:', error)
+    }
   }
 
   return (
