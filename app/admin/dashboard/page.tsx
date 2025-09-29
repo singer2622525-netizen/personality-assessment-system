@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, LogOut, User, Shield, Clock, Users, FileText, Download, Eye, Trash2 } from 'lucide-react'
+import { ArrowLeft, LogOut, User, Shield, Clock, Users, FileText, Download, Eye, Trash2, CheckCircle } from 'lucide-react'
 import { getAssessmentRecords, getAssessmentStats, AssessmentRecord, clearAllAssessmentRecords } from '@/lib/assessment-storage'
 
 interface AdminAuth {
