@@ -62,8 +62,16 @@ export default function HomePage() {
               <button
                 onClick={handleCandidateAccess}
                 style={{ width: '100%', background: 'linear-gradient(135deg, #f97316 0%, #eab308 100%)', color: 'white', padding: '16px 32px', borderRadius: '8px', fontWeight: '500', fontSize: '18px', border: 'none', cursor: 'pointer', transition: 'all 0.3s', transform: 'scale(1)' }}
-                onMouseOver={(e) => { e.target.style.background = 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)'; e.target.style.transform = 'scale(1.05)' }}
-                onMouseOut={(e) => { e.target.style.background = 'linear-gradient(135deg, #f97316 0%, #eab308 100%)'; e.target.style.transform = 'scale(1)' }}
+                onMouseOver={(e) => { 
+                  const target = e.target as HTMLButtonElement;
+                  target.style.background = 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)';
+                  target.style.transform = 'scale(1.05)';
+                }}
+                onMouseOut={(e) => { 
+                  const target = e.target as HTMLButtonElement;
+                  target.style.background = 'linear-gradient(135deg, #f97316 0%, #eab308 100%)';
+                  target.style.transform = 'scale(1)';
+                }}
               >
                 立即开始评测
               </button>
@@ -124,8 +132,14 @@ export default function HomePage() {
             <button
               onClick={handleAdminLogin}
               style={{ padding: '12px 24px', background: '#4b5563', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '16px', transition: 'background-color 0.3s' }}
-              onMouseOver={(e) => { e.target.style.background = '#374151' }}
-              onMouseOut={(e) => { e.target.style.background = '#4b5563' }}
+              onMouseOver={(e) => { 
+                const target = e.target as HTMLButtonElement;
+                target.style.background = '#374151';
+              }}
+              onMouseOut={(e) => { 
+                const target = e.target as HTMLButtonElement;
+                target.style.background = '#4b5563';
+              }}
             >
               登录管理后台
             </button>
