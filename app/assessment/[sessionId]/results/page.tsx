@@ -230,7 +230,7 @@ export default function ResultsPage() {
           <h2 style="color: #f97316; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; margin-bottom: 20px;">岗位适配度分析</h2>
           <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">针对${session.position}岗位的分析</h3>
-            ${generatePositionAnalysisForPrint(session.position, session.results)}
+            ${generatePositionAnalysisForPDF(session.position, session.results)}
           </div>
         </div>
 
