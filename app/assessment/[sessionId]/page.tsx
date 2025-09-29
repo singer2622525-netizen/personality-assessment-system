@@ -1,70 +1,59 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
-import { QUESTIONS } from '@/lib/questions'
-import { Answer, AssessmentSession } from '@/lib/types'
-import { calculatePersonalityScores } from '@/lib/assessment'
+import { AssessmentSession, Answer, QUESTIONS } from '@/lib/types'
 
-export default function AssessmentPage() {
+export default function AssessmentPage({ params }: { params: { sessionId: string } }) {
   const router = useRouter()
-  const params = useParams()
-  const sessionId = params.sessionId as string
-
+  const [session, setSession] = useState<AssessmentSession | null>(null)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Answer[]>([])
-  const [session, setSession] = useState<AssessmentSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const currentQuestion = QUESTIONS[currentQuestionIndex]
-  const progress = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100
 
   useEffect(() => {
-    // 从localStorage加载会话信息
-    const savedSession = localStorage.getItem('assessmentSession')
-    if (savedSession) {
-      const sessionData = JSON.parse(savedSession)
-      setSession(sessionData)
-      setAnswers(sessionData.answers || [])
+    // 从 localStorage 加载会话数据
+    const sessionData = localStorage.getItem(`assessment_session_${params.sessionId}`)
+    if (!sessionData) {
+      router.push('/assessment/start')
+      return
     }
-    setIsLoading(false)
-  }, [])
 
-  useEffect(() => {
-    // 保存进度到localStorage
-    if (session) {
-      const updatedSession: AssessmentSession = {
-        ...session,
-        answers,
-        status: (answers.length === QUESTIONS.length ? 'completed' : 'in_progress') as 'pending' | 'in_progress' | 'completed'
-      }
-      localStorage.setItem('assessmentSession', JSON.stringify(updatedSession))
-      // 避免无限循环，只在状态真正改变时更新
-      if (JSON.stringify(updatedSession) !== JSON.stringify(session)) {
-        setSession(updatedSession)
-      }
+    try {
+      const parsedSession = JSON.parse(sessionData) as AssessmentSession
+      setSession(parsedSession)
+      setAnswers(parsedSession.answers || [])
+    } catch (error) {
+      console.error('解析会话数据失败:', error)
+      router.push('/assessment/start')
+    } finally {
+      setIsLoading(false)
     }
-  }, [answers]) // 移除session依赖，避免循环
+  }, [params.sessionId, router])
 
-  const handleAnswerSelect = (score: number) => {
-    const existingAnswerIndex = answers.findIndex(a => a.questionId === currentQuestion.id)
+  const handleAnswerSelect = (questionId: number, answer: number) => {
+    const newAnswers = answers.filter(a => a.questionId !== questionId)
+    newAnswers.push({ questionId, answer })
+    setAnswers(newAnswers)
+
+    // 更新会话数据
+    const updatedSession: AssessmentSession = {
+      ...session!,
+      answers: newAnswers,
+      status: (newAnswers.length === QUESTIONS.length ? 'completed' : 'in_progress') as 'pending' | 'in_progress' | 'completed'
+    }
     
-    if (existingAnswerIndex >= 0) {
-      // 更新现有答案
-      const updatedAnswers = [...answers]
-      updatedAnswers[existingAnswerIndex] = { questionId: currentQuestion.id, score }
-      setAnswers(updatedAnswers)
-    } else {
-      // 添加新答案
-      setAnswers([...answers, { questionId: currentQuestion.id, score }])
-    }
+    localStorage.setItem(`assessment_session_${params.sessionId}`, JSON.stringify(updatedSession))
+    setSession(updatedSession)
   }
 
   const handleNext = () => {
     if (currentQuestionIndex < QUESTIONS.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
+    } else {
+      // 评测完成，跳转到结果页面
+      router.push(`/assessment/${params.sessionId}/results`)
     }
   }
 
@@ -74,186 +63,189 @@ export default function AssessmentPage() {
     }
   }
 
-  const handleSubmit = async () => {
-    if (answers.length !== QUESTIONS.length) {
-      alert('请完成所有题目')
-      return
-    }
-
-    setIsSubmitting(true)
-    
-    try {
-      // 计算结果
-      const results = calculatePersonalityScores(answers)
-      
-      // 更新会话
-      const completedSession = {
-        ...session!,
-        answers,
-        results,
-        status: 'completed' as const,
-        completedAt: new Date().toISOString()
-      }
-      
-      localStorage.setItem('assessmentSession', JSON.stringify(completedSession))
-      
-      // 同时更新管理员后台的任务数据
-      const taskKey = `assessmentTask_${sessionId}`
-      const existingTask = localStorage.getItem(taskKey)
-      if (existingTask) {
-        const taskData = JSON.parse(existingTask)
-        const updatedTask = {
-          ...taskData,
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-          results: results
-        }
-        localStorage.setItem(taskKey, JSON.stringify(updatedTask))
-      }
-      
-      // 跳转到结果页面
-      router.push(`/assessment/${sessionId}/results`)
-    } catch (error) {
-      console.error('提交失败:', error)
-      alert('提交失败，请重试')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   const getCurrentAnswer = () => {
-    return answers.find(a => a.questionId === currentQuestion.id)?.score || 0
+    const currentQuestion = QUESTIONS[currentQuestionIndex]
+    const answer = answers.find(a => a.questionId === currentQuestion.id)
+    return answer ? answer.answer : null
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%)' }}>
+        <div style={{ color: '#1f2937', fontSize: '18px' }}>加载中...</div>
       </div>
     )
   }
 
   if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">会话不存在</h1>
-          <button
-            onClick={() => router.push('/assessment/start')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            重新开始
-          </button>
-        </div>
-      </div>
-    )
+    return null
   }
 
+  const currentQuestion = QUESTIONS[currentQuestionIndex]
+  const progress = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 进度条 */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff7ed 0%, #fef3c7 100%)', padding: '16px' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        {/* 头部导航 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+          <button
+            onClick={() => router.push('/assessment/start')}
+            style={{ display: 'flex', alignItems: 'center', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}
+          >
+            <ArrowLeft style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+            返回
+          </button>
+          
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: '600', color: '#1f2937', marginBottom: '4px' }}>
+              5型人格评测
+            </h1>
+            <p style={{ fontSize: '14px', color: '#6b7280' }}>
+              {session.candidateName} - {session.position}
+            </p>
+          </div>
+          
+          <div style={{ width: '80px' }}></div>
+        </div>
+
+        {/* 进度条 */}
+        <div style={{ background: 'white', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>
               题目 {currentQuestionIndex + 1} / {QUESTIONS.length}
             </span>
-            <span className="text-sm text-gray-500">
-              {Math.round(progress)}% 完成
+            <span style={{ fontSize: '14px', color: '#6b7280' }}>
+              {Math.round(progress)}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            ></div>
+          <div style={{ width: '100%', height: '8px', background: '#e5e7eb', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ 
+              width: `${progress}%`, 
+              height: '100%', 
+              background: 'linear-gradient(135deg, #f97316 0%, #eab308 100%)', 
+              transition: 'width 0.3s ease' 
+            }}></div>
           </div>
         </div>
-      </div>
 
-      {/* 主要内容 */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          {/* 题目 */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              {currentQuestion.text}
-            </h2>
-            
-            {/* 选项 */}
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((score) => (
+        {/* 题目卡片 */}
+        <div style={{ background: 'white', borderRadius: '12px', padding: '32px', marginBottom: '24px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1f2937', marginBottom: '24px', lineHeight: '1.5' }}>
+            {currentQuestion.text}
+          </h2>
+
+          {/* 选项 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[1, 2, 3, 4, 5].map((value) => {
+              const isSelected = getCurrentAnswer() === value
+              return (
                 <button
-                  key={score}
-                  onClick={() => handleAnswerSelect(score)}
-                  className={`w-full p-4 text-left border-2 rounded-lg transition-all ${
-                    getCurrentAnswer() === score
-                      ? 'border-blue-500 bg-blue-50 text-blue-900'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
+                  key={value}
+                  onClick={() => handleAnswerSelect(currentQuestion.id, value)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    border: `2px solid ${isSelected ? '#f97316' : '#e5e7eb'}`,
+                    borderRadius: '8px',
+                    background: isSelected ? '#fef3c7' : 'white',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    fontSize: '16px',
+                    color: '#374151',
+                    textAlign: 'left',
+                    width: '100%'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = '#d1d5db'
+                      e.currentTarget.style.background = '#f9fafb'
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!isSelected) {
+                      e.currentTarget.style.borderColor = '#e5e7eb'
+                      e.currentTarget.style.background = 'white'
+                    }
+                  }}
                 >
-                  <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                      getCurrentAnswer() === score
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-gray-300'
-                    }`}>
-                      {getCurrentAnswer() === score && (
-                        <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
-                      )}
-                    </div>
-                    <span className="font-medium">
-                      {score === 1 && '完全不符合'}
-                      {score === 2 && '不太符合'}
-                      {score === 3 && '一般'}
-                      {score === 4 && '比较符合'}
-                      {score === 5 && '完全符合'}
-                    </span>
+                  <div style={{ 
+                    width: '24px', 
+                    height: '24px', 
+                    borderRadius: '50%', 
+                    border: `2px solid ${isSelected ? '#f97316' : '#d1d5db'}`,
+                    background: isSelected ? '#f97316' : 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: '16px',
+                    flexShrink: 0
+                  }}>
+                    {isSelected && <CheckCircle style={{ width: '16px', height: '16px', color: 'white' }} />}
                   </div>
+                  <span style={{ fontWeight: isSelected ? '500' : '400' }}>
+                    {value === 1 && '完全不符合'}
+                    {value === 2 && '比较不符合'}
+                    {value === 3 && '不确定'}
+                    {value === 4 && '比较符合'}
+                    {value === 5 && '完全符合'}
+                  </span>
                 </button>
-              ))}
-            </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 导航按钮 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              background: currentQuestionIndex === 0 ? '#f9fafb' : 'white',
+              color: currentQuestionIndex === 0 ? '#9ca3af' : '#374151',
+              cursor: currentQuestionIndex === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            <ArrowLeft style={{ width: '16px', height: '16px' }} />
+            上一题
+          </button>
+
+          <div style={{ fontSize: '14px', color: '#6b7280' }}>
+            已答题: {answers.length} / {QUESTIONS.length}
           </div>
 
-          {/* 导航按钮 */}
-          <div className="flex justify-between">
-            <button
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
-              className="flex items-center px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              上一题
-            </button>
-
-            {currentQuestionIndex === QUESTIONS.length - 1 ? (
-              <button
-                onClick={handleSubmit}
-                disabled={getCurrentAnswer() === 0 || isSubmitting}
-                className="flex items-center px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                ) : (
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                )}
-                完成评测
-              </button>
-            ) : (
-              <button
-                onClick={handleNext}
-                disabled={getCurrentAnswer() === 0}
-                className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                下一题
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </button>
-            )}
-          </div>
+          <button
+            onClick={handleNext}
+            disabled={!getCurrentAnswer()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '12px 24px',
+              border: 'none',
+              borderRadius: '8px',
+              background: getCurrentAnswer() ? 'linear-gradient(135deg, #f97316 0%, #eab308 100%)' : '#e5e7eb',
+              color: getCurrentAnswer() ? 'white' : '#9ca3af',
+              cursor: getCurrentAnswer() ? 'pointer' : 'not-allowed',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            {currentQuestionIndex === QUESTIONS.length - 1 ? '完成评测' : '下一题'}
+            <ArrowRight style={{ width: '16px', height: '16px' }} />
+          </button>
         </div>
       </div>
     </div>
   )
 }
-
-
