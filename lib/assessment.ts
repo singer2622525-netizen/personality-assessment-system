@@ -1,6 +1,4 @@
-import { Answer, PersonalityResults, PersonalityDimension, DIMENSION_DESCRIPTIONS } from './types'
-import { QUESTIONS } from './questions'
-import { calculatePositionMatch, getAllPositions } from './positions'
+import { Answer, PersonalityResults, PersonalityDimension, DIMENSION_DESCRIPTIONS, QUESTIONS } from './types'
 
 // 计算5型人格分数
 export function calculatePersonalityScores(answers: Answer[]): PersonalityResults {
@@ -24,15 +22,15 @@ export function calculatePersonalityScores(answers: Answer[]): PersonalityResult
   answers.forEach(answer => {
     const question = QUESTIONS.find(q => q.id === answer.questionId)
     if (question) {
-      let score = answer.score
+      let score = answer.answer
       
       // 反向计分
       if (question.reverse) {
         score = 6 - score
       }
       
-      scores[question.dimension] += score
-      questionCounts[question.dimension]++
+      scores[question.trait] += score
+      questionCounts[question.trait]++
     }
   })
 
@@ -98,21 +96,6 @@ function generatePersonalityAnalysis(scores: Record<PersonalityDimension, number
     analysis.weaknesses.push(`${desc.name}：${desc.low}`)
   })
 
-  // 生成岗位匹配建议
-  const positions = getAllPositions()
-  const positionMatches = positions.map(position => {
-    const match = calculatePositionMatch(scores, position.id)
-    return { position, match }
-  }).sort((a, b) => b.match.matchScore - a.match.matchScore)
-
-  // 添加最适合的岗位建议
-  if (positionMatches.length > 0) {
-    const bestMatch = positionMatches[0]
-    if (bestMatch.match.matchScore >= 70) {
-      analysis.recommendations.push(`最适合${bestMatch.position.name}岗位，匹配度${bestMatch.match.matchScore}%`)
-    }
-  }
-
   // 添加通用建议
   if (scores.conscientiousness >= 4.0) {
     analysis.recommendations.push('具备高度责任心，适合需要强执行力的岗位')
@@ -149,11 +132,12 @@ export function getScoreColor(score: number): string {
 
 // 生成评测链接
 export function generateAssessmentLink(sessionId: string): string {
+  if (typeof window === 'undefined') return ''
   return `${window.location.origin}/assessment/${sessionId}`
 }
 
 // 验证答案完整性
 export function validateAnswers(answers: Answer[]): boolean {
   return answers.length === QUESTIONS.length && 
-         answers.every(answer => answer.score >= 1 && answer.score <= 5)
+         answers.every(answer => answer.answer >= 1 && answer.answer <= 5)
 }
