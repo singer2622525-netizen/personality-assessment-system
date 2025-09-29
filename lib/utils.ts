@@ -1,57 +1,53 @@
-import { AssessmentSession } from './types'
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
 
-// 生成唯一ID
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// 生成唯一ID - 简化版本，避免URL问题
 export function generateUniqueId(name: string, phone: string): string {
-  const now = new Date()
-  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
-  const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '')
+  const timestamp = Date.now().toString(36)
   const nameHash = name.slice(0, 2)
   const phoneHash = phone.slice(-4)
-  
-  return `${dateStr}_${timeStr}_${nameHash}_${phoneHash}`
+  return `${timestamp}_${nameHash}_${phoneHash}`
 }
 
-// 验证手机号
+// 手机号码验证
 export function validatePhone(phone: string): boolean {
-  const phoneRegex = /^1[3-9]\d{9}$/
-  return phoneRegex.test(phone)
+  return /^1[3-9]\d{9}$/.test(phone)
 }
 
-// 验证邮箱
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
-// 验证中文姓名
-export function validateChineseName(name: string): boolean {
-  const nameRegex = /^[\u4e00-\u9fa5]{2,4}$/
-  return nameRegex.test(name)
-}
-
-// 获取手机号验证错误信息
 export function getPhoneValidationError(phone: string): string {
-  if (!phone) return '请输入手机号'
-  if (!validatePhone(phone)) return '请输入正确的手机号格式'
+  if (!phone) return '手机号码不能为空'
+  if (!/^1[3-9]\d{9}$/.test(phone)) return '请输入11位有效手机号码'
   return ''
 }
 
-// 获取姓名验证错误信息
+// 邮箱验证
+export function validateEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+// 中文姓名验证 (2-10个汉字)
+export function validateChineseName(name: string): boolean {
+  return /^[\u4e00-\u9fa5]{2,10}$/.test(name)
+}
+
 export function getNameValidationError(name: string): string {
-  if (!name) return '请输入姓名'
-  if (!validateChineseName(name)) return '请输入2-4个中文字符的姓名'
+  if (!name) return '姓名不能为空'
+  if (!/^[\u4e00-\u9fa5]{2,10}$/.test(name)) return '姓名必须是2-10个汉字'
   return ''
 }
 
 // 格式化日期
 export function formatDate(date: Date): string {
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  const hours = date.getHours().toString().padStart(2, '0')
+  const minutes = date.getMinutes().toString().padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 // 生成评测链接
@@ -60,21 +56,15 @@ export function generateAssessmentLink(sessionId: string): string {
   return `${window.location.origin}/assessment/${sessionId}`
 }
 
-// 创建评测会话
-export function createAssessmentSession(sessionData: AssessmentSession): void {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(`assessmentSession_${sessionData.id}`, JSON.stringify(sessionData))
-}
-
 // 获取评测会话
-export function getAssessmentSession(sessionId: string): AssessmentSession | null {
+export function getAssessmentSession(sessionId: string) {
   if (typeof window === 'undefined') return null
   const data = localStorage.getItem(`assessmentSession_${sessionId}`)
   if (data) {
     try {
       return JSON.parse(data)
-    } catch (error) {
-      console.error('Failed to parse session data:', error)
+    } catch (e) {
+      console.error(`Failed to parse assessment session ${sessionId} from localStorage`, e)
       return null
     }
   }
@@ -82,17 +72,13 @@ export function getAssessmentSession(sessionId: string): AssessmentSession | nul
 }
 
 // 更新评测会话
-export function updateAssessmentSession(sessionId: string, updates: Partial<AssessmentSession>): void {
+export function updateAssessmentSession(sessionId: string, sessionData: any) {
   if (typeof window === 'undefined') return
-  const session = getAssessmentSession(sessionId)
-  if (session) {
-    const updatedSession = { ...session, ...updates }
-    localStorage.setItem(`assessmentSession_${sessionId}`, JSON.stringify(updatedSession))
-  }
+  localStorage.setItem(`assessmentSession_${sessionId}`, JSON.stringify(sessionData))
 }
 
-// 保存评测结果
-export function saveAssessmentSession(session: AssessmentSession): void {
+// 创建评测会话
+export function createAssessmentSession(sessionData: any) {
   if (typeof window === 'undefined') return
-  localStorage.setItem(`assessmentSession_${session.id}`, JSON.stringify(session))
+  localStorage.setItem(`assessmentSession_${sessionData.id}`, JSON.stringify(sessionData))
 }
