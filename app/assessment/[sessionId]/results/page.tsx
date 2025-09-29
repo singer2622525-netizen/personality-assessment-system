@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, Home, CheckCircle, Download, Printer, Share2 } from 'lucide-react'
 import { AssessmentSession, PersonalityResults } from '@/lib/types'
-import { getAssessmentSession } from '@/lib/utils'
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts'
 
 export default function ResultsPage() {
@@ -17,11 +16,12 @@ export default function ResultsPage() {
   const [showExitModal, setShowExitModal] = useState(false)
 
   useEffect(() => {
-    // 从localStorage加载会话信息
-    const sessionData = getAssessmentSession(sessionId)
+    // 从localStorage加载会话信息 - 使用正确的键名
+    const savedSession = localStorage.getItem(`assessmentSession_${sessionId}`)
     const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
     
-    if (sessionData) {
+    if (savedSession) {
+      const sessionData = JSON.parse(savedSession)
       setSession(sessionData)
       
       // 只有应聘者（非管理员）才显示退出提醒
