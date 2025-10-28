@@ -99,37 +99,49 @@ Windows 专用部署文件：
 Windows 服务器防火墙：
   部署脚本会自动配置防火墙规则
   如需手动配置，以管理员身份运行 PowerShell：
-  
+
   New-NetFirewallRule -DisplayName "Personality Assessment" `
     -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow
-  
+
   New-NetFirewallRule -DisplayName "HTTP" `
     -Direction Inbound -LocalPort 80 -Protocol TCP -Action Allow
-  
+
   New-NetFirewallRule -DisplayName "HTTPS" `
     -Direction Inbound -LocalPort 443 -Protocol TCP -Action Allow
 
 ================================================================================
-📋 快速开始清单
+📋 Windows 部署前检查清单
 ================================================================================
 
-部署前准备：
-□ 准备好服务器（有公网IP）
-□ 已购买域名
-□ 域名DNS已解析到服务器IP
-
 服务器环境：
-□ 已安装 Docker
-□ 已安装 Docker Compose
-□ 防火墙已配置
+□ Windows Server 2016+ 已安装
+□ 管理员权限已获取
+□ 网络连接正常
+□ 硬盘空间充足（20GB+）
+□ 内存充足（4GB+）
+
+域名准备（根据部署类型选择）：
+□ 内网部署：已获取服务器内网IP
+□ 公网部署：已购买域名，DNS已解析
+□ 混合部署：域名+内网IP都已准备
+
+软件准备：
+□ Docker Desktop 下载链接已准备
+□ 项目文件已解压到 C:\WebApps\personality-assessment\
+□ PowerShell 管理员权限已确认
+
+网络配置：
+□ 防火墙端口已开放（80、443、3000）
+□ 云平台安全组已配置（云服务器）
+□ 内网 hosts 已配置（内网部署）
 
 部署步骤：
-□ 上传项目文件到服务器
-□ 运行部署脚本或手动配置
-□ Nginx 已配置反向代理
-□ SSL证书已配置（如使用HTTPS）
-□ 测试网站访问
-□ 测试功能完整性
+□ Docker Desktop 已安装并运行
+□ 项目文件已解压到正确位置
+□ 部署脚本已运行完成
+□ 服务状态检查通过
+□ 网站访问测试通过
+□ 功能测试通过
 
 ================================================================================
 ⚡ Windows 管理命令（部署后使用）
@@ -163,29 +175,47 @@ Windows 服务器防火墙：
 🎯 访问系统
 ================================================================================
 
-部署完成后，访问您的域名：
+根据部署类型访问：
+
+内网部署：
+  http://assessment.company.com:3000
+  （根据您配置的内网域名）
+
+公网部署：
   http://yourdomain.com
-  或
-  https://yourdomain.com (如果配置了HTTPS)
+  或 https://yourdomain.com (如果配置了HTTPS)
+
+混合部署：
+  支持两种访问方式
 
 管理员登录：
   用户名：admin
   密码：admin123
 
-⚠️ 首次使用请修改管理员密码
+⚠️ 重要提醒：
+1. 首次使用请修改管理员密码
+2. 内网部署不需要购买域名
+3. 公网部署需要配置DNS解析
+4. HTTPS需要域名支持
 
 ================================================================================
 📞 遇到问题？
 ================================================================================
 
-常见问题已包含在文档中：
-  - 快速上手指南.md
-  - 服务器部署完整指南.md
-  - 项目交付清单.md
+详细问题排查：
+  - Windows部署注意事项.txt - 常见问题与解决方案
+  - Windows服务器部署指南.md - 详细部署步骤
+  - Windows快速部署指南.txt - 快速参考
 
 查看日志定位问题：
   docker-compose logs
-  tail -f /var/log/nginx/error.log
+  Get-EventLog -LogName Application -Newest 10
+
+重要提醒：
+  - 必须以管理员身份运行 PowerShell
+  - 确保 Docker Desktop 正在运行
+  - 检查防火墙和网络配置
+  - 内网部署不需要购买域名
 
 ================================================================================
 📁 文件传输到 Windows 服务器的方法
