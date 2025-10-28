@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Home, CheckCircle, Download, Printer, Share2 } from 'lucide-react'
-import { AssessmentSession, PersonalityResults } from '@/lib/types'
-import { getScoreLevel, getScoreColor } from '@/lib/assessment'
-import { DIMENSION_DESCRIPTIONS } from '@/lib/types'
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts'
+import { getScoreColor, getScoreLevel } from '@/lib/assessment'
+import { AssessmentSession, DIMENSION_DESCRIPTIONS, PersonalityResults } from '@/lib/types'
+import { ArrowLeft, CheckCircle, Download, Home, Printer, Share2 } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts'
 
 export default function ResultsPage() {
   const router = useRouter()
@@ -21,11 +20,11 @@ export default function ResultsPage() {
     // 从localStorage加载会话信息
     const savedSession = localStorage.getItem('assessmentSession')
     const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
-    
+
     if (savedSession) {
       const sessionData = JSON.parse(savedSession)
       setSession(sessionData)
-      
+
       // 只有应聘者（非管理员）才显示退出提醒
       if (sessionData.status === 'completed' && !isAdmin) {
         console.log('应聘者评测已完成，2秒后显示退出提醒')
@@ -103,23 +102,23 @@ export default function ResultsPage() {
         }
       </style>
     `
-    
+
     // 创建打印内容
     const printContent = document.createElement('div')
     printContent.className = 'print-content'
     printContent.innerHTML = generatePrintContent()
-    
+
     // 添加打印样式
     const styleElement = document.createElement('div')
     styleElement.innerHTML = printStyles
-    
+
     // 临时添加到页面
     document.body.appendChild(styleElement)
     document.body.appendChild(printContent)
-    
+
     // 执行打印
     window.print()
-    
+
     // 清理临时元素
     document.body.removeChild(styleElement)
     document.body.removeChild(printContent)
@@ -128,11 +127,11 @@ export default function ResultsPage() {
   // 生成打印内容
   const generatePrintContent = () => {
     if (!session || !session.results) return ''
-    
+
     const currentDate = new Date().toLocaleDateString('zh-CN')
     const completionDate = new Date(session.completedAt || '').toLocaleDateString('zh-CN')
     const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
-    
+
     return `
       <div style="font-family: 'Microsoft YaHei', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; background: white;">
         <!-- 头部 -->
@@ -171,10 +170,10 @@ export default function ResultsPage() {
         <div style="margin-bottom: 30px;" class="avoid-break">
           <h2 style="color: #f97316; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; margin-bottom: 20px;">人格维度得分</h2>
           ${Object.entries(session.results).filter(([key]) => key !== 'overallAnalysis' && key !== 'strengths' && key !== 'weaknesses' && key !== 'recommendations').map(([dimension, score]) => {
-            const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
-            const level = getScoreLevel(score as number)
-            const levelColor = level === '高' ? '#28a745' : level === '中等' ? '#ffc107' : '#dc3545'
-            return `
+      const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
+      const level = getScoreLevel(score as number)
+      const levelColor = level === '高' ? '#28a745' : level === '中等' ? '#ffc107' : '#dc3545'
+      return `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #f97316;">
                 <div>
                   <strong>${desc.name}</strong><br>
@@ -186,7 +185,7 @@ export default function ResultsPage() {
                 </div>
               </div>
             `
-          }).join('')}
+    }).join('')}
         </div>
 
         ${isAdmin ? `
@@ -196,7 +195,7 @@ export default function ResultsPage() {
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <p>${session.results.overallAnalysis}</p>
           </div>
-          
+
           ${session.results.strengths && session.results.strengths.length > 0 ? `
           <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">优势特征</h3>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
@@ -205,7 +204,7 @@ export default function ResultsPage() {
             `).join('')}
           </div>
           ` : ''}
-          
+
           ${session.results.weaknesses && session.results.weaknesses.length > 0 ? `
           <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">待提升方面</h3>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
@@ -214,7 +213,7 @@ export default function ResultsPage() {
             `).join('')}
           </div>
           ` : ''}
-          
+
           ${session.results.recommendations && session.results.recommendations.length > 0 ? `
           <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">职业建议</h3>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
@@ -230,7 +229,7 @@ export default function ResultsPage() {
           <h2 style="color: #f97316; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; margin-bottom: 20px;">岗位适配度分析</h2>
           <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">针对${session.position}岗位的分析</h3>
-            ${generatePositionAnalysisForPrint(session.position, session.results)}
+            ${generatePositionAnalysisForPDF(session.position, session.results)}
           </div>
         </div>
 
@@ -244,7 +243,7 @@ export default function ResultsPage() {
               <li>评估候选人与岗位要求的匹配度</li>
               <li>了解候选人的职业发展规划</li>
             </ul>
-            
+
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">入职建议</h3>
             <ul>
               <li>提供适当的培训和指导</li>
@@ -267,7 +266,7 @@ export default function ResultsPage() {
   // 生成岗位分析内容（用于PDF）
   const generatePositionAnalysisForPDF = (position: string, results: PersonalityResults) => {
     let analysis = ''
-    
+
     if (position.includes('销售') || position.includes('客户') || position.includes('市场')) {
       analysis = `
         <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px; border-left: 4px solid #28a745;">
@@ -321,7 +320,7 @@ export default function ResultsPage() {
         </div>
       `
     }
-    
+
     return analysis
   }
 
@@ -333,38 +332,38 @@ export default function ResultsPage() {
 
     try {
       const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
-      
+
       // 根据身份生成不同的PDF内容
       const pdfContent = isAdmin ? generateAdminPDFContent(session, session.results) : generateCandidatePDFContent(session, session.results)
-      
+
       // 创建Blob对象
       const blob = new Blob([pdfContent], { type: 'text/html;charset=utf-8' })
-      
+
       // 生成带时间戳的文件名，避免重复下载时覆盖
       const now = new Date()
-      const timestamp = now.getFullYear() + 
-        String(now.getMonth() + 1).padStart(2, '0') + 
+      const timestamp = now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, '0') +
         String(now.getDate()).padStart(2, '0') + '_' +
-        String(now.getHours()).padStart(2, '0') + 
-        String(now.getMinutes()).padStart(2, '0') + 
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
         String(now.getSeconds()).padStart(2, '0')
-      
+
       const fileType = isAdmin ? '招聘分析报告' : '评测结果'
-      
+
       // 创建下载链接
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = `${session.candidateName}_${fileType}_${timestamp}.html`
-      
+
       // 触发下载
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
+
       // 清理URL对象
       URL.revokeObjectURL(url)
-      
+
       alert('评测报告已下载，请使用浏览器打印功能保存为PDF')
     } catch (error) {
       console.error('下载失败:', error)
@@ -376,7 +375,7 @@ export default function ResultsPage() {
   const generateAdminPDFContent = (session: AssessmentSession, results: PersonalityResults) => {
     const currentDate = new Date().toLocaleDateString('zh-CN')
     const completionDate = new Date(session.completedAt || '').toLocaleDateString('zh-CN')
-    
+
     return `
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -549,10 +548,10 @@ export default function ResultsPage() {
     <div class="section">
         <h2>人格维度得分</h2>
         ${Object.entries(results).filter(([key]) => key !== 'overallAnalysis' && key !== 'strengths' && key !== 'weaknesses' && key !== 'recommendations').map(([dimension, score]) => {
-          const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
-          const level = getScoreLevel(score as number)
-          const levelClass = level === '高' ? 'level-high' : level === '中等' ? 'level-medium' : 'level-low'
-          return `
+      const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
+      const level = getScoreLevel(score as number)
+      const levelClass = level === '高' ? 'level-high' : level === '中等' ? 'level-medium' : 'level-low'
+      return `
             <div class="score-item">
               <div>
                 <strong>${desc.name}</strong><br>
@@ -564,12 +563,12 @@ export default function ResultsPage() {
               </div>
             </div>
           `
-        }).join('')}
+    }).join('')}
     </div>
 
     <div class="section">
         <h2>招聘分析报告</h2>
-        
+
         <!-- 候选人基本信息 -->
         <div style="background: #e7f3ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">候选人信息</h3>
@@ -599,10 +598,10 @@ export default function ResultsPage() {
         <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">人格特征分析</h3>
             ${Object.entries(results).filter(([key]) => key !== 'overallAnalysis' && key !== 'strengths' && key !== 'weaknesses' && key !== 'recommendations').map(([dimension, score]) => {
-              const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
-              const level = getScoreLevel(score as number)
-              const colorClass = getScoreColor(score as number)
-              return `
+      const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
+      const level = getScoreLevel(score as number)
+      const colorClass = getScoreColor(score as number)
+      return `
                 <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin: 10px 0; background: white; border-radius: 8px; border-left: 4px solid #f97316;">
                   <div style="flex: 1;">
                     <div style="font-weight: bold; color: #333;">${desc.name}</div>
@@ -614,13 +613,13 @@ export default function ResultsPage() {
                   </div>
                 </div>
               `
-            }).join('')}
+    }).join('')}
         </div>
 
         <!-- 招聘建议 -->
         <div style="background: #fef3c7; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">招聘建议</h3>
-            
+
             ${results.strengths && results.strengths.length > 0 ? `
             <div style="margin-bottom: 20px;">
                 <h4 style="font-weight: bold; color: #059669; margin-bottom: 10px;">✅ 优势特征</h4>
@@ -629,7 +628,7 @@ export default function ResultsPage() {
                 </ul>
             </div>
             ` : ''}
-            
+
             ${results.weaknesses && results.weaknesses.length > 0 ? `
             <div style="margin-bottom: 20px;">
                 <h4 style="font-weight: bold; color: #dc2626; margin-bottom: 10px;">⚠️ 待提升方面</h4>
@@ -638,7 +637,7 @@ export default function ResultsPage() {
                 </ul>
             </div>
             ` : ''}
-            
+
             ${results.recommendations && results.recommendations.length > 0 ? `
             <div style="margin-bottom: 20px;">
                 <h4 style="font-weight: bold; color: #2563eb; margin-bottom: 10px;">💼 职业建议</h4>
@@ -652,7 +651,7 @@ export default function ResultsPage() {
         <!-- 职业能力分析 -->
         <div style="background: #f3e8ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">职业能力分析</h3>
-            
+
             <!-- 沟通能力分析 -->
             <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3b82f6;">
                 <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">🗣️ 沟通与人际交往能力</h4>
@@ -818,7 +817,7 @@ export default function ResultsPage() {
         <!-- 综合评估与招聘建议 -->
         <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 15px 0;">
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">综合评估与招聘建议</h3>
-            
+
             <!-- 整体人格特征 -->
             <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0;">
                 <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">📋 整体人格特征</h4>
@@ -828,19 +827,19 @@ export default function ResultsPage() {
                         <div>
                             <h5 style="font-weight: bold; color: #059669; margin-bottom: 5px;">核心优势</h5>
                             <ul style="list-style: disc; padding-left: 20px; font-size: 12px;">
-                                ${results.strengths && results.strengths.length > 0 ? 
-                                  results.strengths.slice(0, 3).map(strength => `<li>${strength}</li>`).join('') : 
-                                  '<li>人格特征均衡发展</li>'
-                                }
+                                ${results.strengths && results.strengths.length > 0 ?
+        results.strengths.slice(0, 3).map(strength => `<li>${strength}</li>`).join('') :
+        '<li>人格特征均衡发展</li>'
+      }
                             </ul>
                         </div>
                         <div>
                             <h5 style="font-weight: bold; color: #dc2626; margin-bottom: 5px;">发展空间</h5>
                             <ul style="list-style: disc; padding-left: 20px; font-size: 12px;">
-                                ${results.weaknesses && results.weaknesses.length > 0 ? 
-                                  results.weaknesses.slice(0, 3).map(weakness => `<li>${weakness}</li>`).join('') : 
-                                  '<li>各维度发展较为均衡</li>'
-                                }
+                                ${results.weaknesses && results.weaknesses.length > 0 ?
+        results.weaknesses.slice(0, 3).map(weakness => `<li>${weakness}</li>`).join('') :
+        '<li>各维度发展较为均衡</li>'
+      }
                             </ul>
                         </div>
                     </div>
@@ -868,32 +867,32 @@ export default function ResultsPage() {
                     <div style="margin-bottom: 15px;">
                         <strong>重点关注领域：</strong>
                         <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
-                            ${results.weaknesses && results.weaknesses.length > 0 ? 
-                              results.weaknesses.slice(0, 2).map(weakness => `<li>如何提升${weakness.split('：')[0]}</li>`).join('') : 
-                              '<li>专业技能和实际工作经验</li>'
-                            }
+                            ${results.weaknesses && results.weaknesses.length > 0 ?
+        results.weaknesses.slice(0, 2).map(weakness => `<li>如何提升${weakness.split('：')[0]}</li>`).join('') :
+        '<li>专业技能和实际工作经验</li>'
+      }
                         </ul>
                     </div>
                     <div style="margin-bottom: 15px;">
                         <strong>优势展示：</strong>
                         <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
-                            ${results.strengths && results.strengths.length > 0 ? 
-                              results.strengths.slice(0, 2).map(strength => `<li>如何发挥${strength.split('：')[0]}优势</li>`).join('') : 
-                              '<li>综合能力展示</li>'
-                            }
+                            ${results.strengths && results.strengths.length > 0 ?
+        results.strengths.slice(0, 2).map(strength => `<li>如何发挥${strength.split('：')[0]}优势</li>`).join('') :
+        '<li>综合能力展示</li>'
+      }
                         </ul>
                     </div>
                     <div>
                         <strong>面试方式建议：</strong>
                         <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
-                            ${results.extraversion >= 4 ? 
-                              '<li>采用小组讨论或团队合作场景测试</li>' : 
-                              '<li>采用一对一深度面试，关注专业能力</li>'
-                            }
-                            ${results.conscientiousness >= 4 ? 
-                              '<li>设置具体的工作任务和截止时间测试</li>' : 
-                              '<li>关注候选人的灵活性和适应性</li>'
-                            }
+                            ${results.extraversion >= 4 ?
+        '<li>采用小组讨论或团队合作场景测试</li>' :
+        '<li>采用一对一深度面试，关注专业能力</li>'
+      }
+                            ${results.conscientiousness >= 4 ?
+        '<li>设置具体的工作任务和截止时间测试</li>' :
+        '<li>关注候选人的灵活性和适应性</li>'
+      }
                         </ul>
                     </div>
                 </div>
@@ -906,14 +905,14 @@ export default function ResultsPage() {
                     <div style="margin-bottom: 15px;">
                         <strong>工作环境：</strong>
                         <ul style="list-style: disc; padding-left: 20px; margin-top: 5px;">
-                            ${results.neuroticism >= 4 ? 
-                              '<li>提供稳定的工作环境和充分的支持</li>' : 
-                              '<li>可以提供适当的挑战和成长机会</li>'
-                            }
-                            ${results.extraversion >= 4 ? 
-                              '<li>安排团队协作和社交活动</li>' : 
-                              '<li>提供独立工作空间和深度思考时间</li>'
-                            }
+                            ${results.neuroticism >= 4 ?
+        '<li>提供稳定的工作环境和充分的支持</li>' :
+        '<li>可以提供适当的挑战和成长机会</li>'
+      }
+                            ${results.extraversion >= 4 ?
+        '<li>安排团队协作和社交活动</li>' :
+        '<li>提供独立工作空间和深度思考时间</li>'
+      }
                         </ul>
                     </div>
                     <div style="margin-bottom: 15px;">
@@ -977,7 +976,7 @@ export default function ResultsPage() {
   const generateCandidatePDFContent = (session: AssessmentSession, results: PersonalityResults) => {
     const currentDate = new Date().toLocaleDateString('zh-CN')
     const completionDate = new Date(session.completedAt || '').toLocaleDateString('zh-CN')
-    
+
     return `
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -1106,10 +1105,10 @@ export default function ResultsPage() {
     <div class="section">
         <h2>人格维度得分</h2>
         ${Object.entries(results).filter(([key]) => key !== 'overallAnalysis' && key !== 'strengths' && key !== 'weaknesses' && key !== 'recommendations').map(([dimension, score]) => {
-          const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
-          const level = getScoreLevel(score as number)
-          const levelClass = level === '高' ? 'level-high' : level === '中等' ? 'level-medium' : 'level-low'
-          return `
+      const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
+      const level = getScoreLevel(score as number)
+      const levelClass = level === '高' ? 'level-high' : level === '中等' ? 'level-medium' : 'level-low'
+      return `
             <div class="score-item">
               <div>
                 <strong>${desc.name}</strong><br>
@@ -1121,7 +1120,7 @@ export default function ResultsPage() {
               </div>
             </div>
           `
-        }).join('')}
+    }).join('')}
     </div>
 
     <div class="footer">
@@ -1138,7 +1137,7 @@ export default function ResultsPage() {
     const currentDate = new Date().toLocaleDateString('zh-CN')
     const completionDate = new Date(session.completedAt || '').toLocaleDateString('zh-CN')
     const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
-    
+
     return `
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -1311,10 +1310,10 @@ export default function ResultsPage() {
     <div class="section">
         <h2>人格维度得分</h2>
         ${Object.entries(results).filter(([key]) => key !== 'overallAnalysis' && key !== 'strengths' && key !== 'weaknesses' && key !== 'recommendations').map(([dimension, score]) => {
-          const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
-          const level = getScoreLevel(score as number)
-          const levelClass = level === '高' ? 'level-high' : level === '中等' ? 'level-medium' : 'level-low'
-          return `
+      const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
+      const level = getScoreLevel(score as number)
+      const levelClass = level === '高' ? 'level-high' : level === '中等' ? 'level-medium' : 'level-low'
+      return `
             <div class="score-item">
               <div>
                 <strong>${desc.name}</strong><br>
@@ -1326,7 +1325,7 @@ export default function ResultsPage() {
               </div>
             </div>
           `
-        }).join('')}
+    }).join('')}
     </div>
 
     ${isAdmin ? `
@@ -1335,21 +1334,21 @@ export default function ResultsPage() {
         <div class="analysis-box">
             <p>${results.overallAnalysis}</p>
         </div>
-        
+
         ${results.strengths && results.strengths.length > 0 ? `
         <h3>优势特征</h3>
         <div class="analysis-box">
             ${results.strengths.map(strength => `<div class="strength-item">${strength}</div>`).join('')}
         </div>
         ` : ''}
-        
+
         ${results.weaknesses && results.weaknesses.length > 0 ? `
         <h3>待提升方面</h3>
         <div class="analysis-box">
             ${results.weaknesses.map(weakness => `<div class="weakness-item">${weakness}</div>`).join('')}
         </div>
         ` : ''}
-        
+
         ${results.recommendations && results.recommendations.length > 0 ? `
         <h3>职业建议</h3>
         <div class="analysis-box">
@@ -1375,7 +1374,7 @@ export default function ResultsPage() {
                 <li>评估候选人与岗位要求的匹配度</li>
                 <li>了解候选人的职业发展规划</li>
             </ul>
-            
+
             <h3>入职建议</h3>
             <ul>
                 <li>提供适当的培训和指导</li>
@@ -1398,7 +1397,7 @@ export default function ResultsPage() {
   // 生成岗位分析内容
   const generatePositionAnalysis = (position: string, results: PersonalityResults) => {
     let analysis = ''
-    
+
     if (position.includes('销售') || position.includes('客户') || position.includes('市场')) {
       analysis = `
         <div class="match-item">
@@ -1452,7 +1451,7 @@ export default function ResultsPage() {
         </div>
       `
     }
-    
+
     return analysis
   }
 
@@ -1625,7 +1624,7 @@ export default function ResultsPage() {
                 const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
                 const level = getScoreLevel(score as number)
                 const colorClass = getScoreColor(score as number)
-                
+
                 return (
                   <div key={dimension} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-center mb-2">
@@ -1674,7 +1673,7 @@ export default function ResultsPage() {
                     const desc = DIMENSION_DESCRIPTIONS[dimension as keyof typeof DIMENSION_DESCRIPTIONS]
                     const level = getScoreLevel(score as number)
                     const colorClass = getScoreColor(score as number)
-                    
+
                     return (
                       <div key={dimension} className="flex items-center justify-between p-3 bg-white rounded border">
                         <div className="flex-1">
@@ -1706,7 +1705,7 @@ export default function ResultsPage() {
                       </ul>
                     </div>
                   )}
-                  
+
                   {/* 待提升方面 */}
                   {results.weaknesses.length > 0 && (
                     <div>
@@ -1718,7 +1717,7 @@ export default function ResultsPage() {
                       </ul>
                     </div>
                   )}
-                  
+
                   {/* 职业建议 */}
                   {results.recommendations.length > 0 && (
                     <div>
@@ -1975,7 +1974,7 @@ export default function ResultsPage() {
                       <div className="mb-3">
                         <strong>应聘岗位：</strong>{session?.position}
                       </div>
-                      
+
                       {/* 针对具体岗位的分析 */}
                       <div className="mb-4 p-3 bg-blue-50 rounded border">
                         <h5 className="font-medium text-blue-900 mb-2">针对{session?.position}岗位的分析：</h5>
@@ -2018,7 +2017,7 @@ export default function ResultsPage() {
                               )}
                             </div>
                           )}
-                          
+
                           {/* 技术类岗位 */}
                           {(session?.position?.includes('技术') || session?.position?.includes('开发') || session?.position?.includes('工程师') || session?.position?.includes('程序')) && (
                             <div>
@@ -2057,7 +2056,7 @@ export default function ResultsPage() {
                               )}
                             </div>
                           )}
-                          
+
                           {/* 管理类岗位 */}
                           {(session?.position?.includes('管理') || session?.position?.includes('主管') || session?.position?.includes('经理') || session?.position?.includes('领导')) && (
                             <div>
@@ -2096,7 +2095,7 @@ export default function ResultsPage() {
                               )}
                             </div>
                           )}
-                          
+
                           {/* 财务类岗位 */}
                           {(session?.position?.includes('财务') || session?.position?.includes('会计') || session?.position?.includes('审计')) && (
                             <div>
@@ -2135,7 +2134,7 @@ export default function ResultsPage() {
                               )}
                             </div>
                           )}
-                          
+
                           {/* 设计类岗位 */}
                           {(session?.position?.includes('设计') || session?.position?.includes('创意') || session?.position?.includes('美术')) && (
                             <div>
@@ -2174,47 +2173,47 @@ export default function ResultsPage() {
                               )}
                             </div>
                           )}
-                          
+
                           {/* 通用分析 */}
-                          {!session?.position?.includes('销售') && !session?.position?.includes('客户') && !session?.position?.includes('市场') && 
-                           !session?.position?.includes('技术') && !session?.position?.includes('开发') && !session?.position?.includes('工程师') && !session?.position?.includes('程序') &&
-                           !session?.position?.includes('管理') && !session?.position?.includes('主管') && !session?.position?.includes('经理') && !session?.position?.includes('领导') &&
-                           !session?.position?.includes('财务') && !session?.position?.includes('会计') && !session?.position?.includes('审计') &&
-                           !session?.position?.includes('设计') && !session?.position?.includes('创意') && !session?.position?.includes('美术') && (
-                            <div>
-                              <p className="text-gray-600 mb-2">基于人格特征的综合评估：</p>
-                              {results.conscientiousness >= 4 && (
-                                <div className="flex items-center text-green-700 mb-1">
-                                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                  <span>✅ 责任心强，适合需要高度责任感的岗位</span>
-                                </div>
-                              )}
-                              {results.extraversion >= 4 && (
-                                <div className="flex items-center text-green-700 mb-1">
-                                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                  <span>✅ 外向性强，适合需要人际交往的岗位</span>
-                                </div>
-                              )}
-                              {results.agreeableness >= 4 && (
-                                <div className="flex items-center text-green-700 mb-1">
-                                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                  <span>✅ 团队合作意识强，适合协作性工作</span>
-                                </div>
-                              )}
-                              {results.openness >= 4 && (
-                                <div className="flex items-center text-green-700 mb-1">
-                                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                  <span>✅ 创新思维强，适合需要创造力的岗位</span>
-                                </div>
-                              )}
-                              {results.neuroticism <= 2 && (
-                                <div className="flex items-center text-green-700 mb-1">
-                                  <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                                  <span>✅ 情绪稳定，适合高压工作环境</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          {!session?.position?.includes('销售') && !session?.position?.includes('客户') && !session?.position?.includes('市场') &&
+                            !session?.position?.includes('技术') && !session?.position?.includes('开发') && !session?.position?.includes('工程师') && !session?.position?.includes('程序') &&
+                            !session?.position?.includes('管理') && !session?.position?.includes('主管') && !session?.position?.includes('经理') && !session?.position?.includes('领导') &&
+                            !session?.position?.includes('财务') && !session?.position?.includes('会计') && !session?.position?.includes('审计') &&
+                            !session?.position?.includes('设计') && !session?.position?.includes('创意') && !session?.position?.includes('美术') && (
+                              <div>
+                                <p className="text-gray-600 mb-2">基于人格特征的综合评估：</p>
+                                {results.conscientiousness >= 4 && (
+                                  <div className="flex items-center text-green-700 mb-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    <span>✅ 责任心强，适合需要高度责任感的岗位</span>
+                                  </div>
+                                )}
+                                {results.extraversion >= 4 && (
+                                  <div className="flex items-center text-green-700 mb-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    <span>✅ 外向性强，适合需要人际交往的岗位</span>
+                                  </div>
+                                )}
+                                {results.agreeableness >= 4 && (
+                                  <div className="flex items-center text-green-700 mb-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    <span>✅ 团队合作意识强，适合协作性工作</span>
+                                  </div>
+                                )}
+                                {results.openness >= 4 && (
+                                  <div className="flex items-center text-green-700 mb-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    <span>✅ 创新思维强，适合需要创造力的岗位</span>
+                                  </div>
+                                )}
+                                {results.neuroticism <= 2 && (
+                                  <div className="flex items-center text-green-700 mb-1">
+                                    <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                                    <span>✅ 情绪稳定，适合高压工作环境</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -2401,7 +2400,7 @@ export default function ResultsPage() {
                 评测完成确认
               </h3>
               <p className="text-gray-600 mb-6">
-                您已完成5型人格评测，感谢您的参与！<br/>
+                您已完成5型人格评测，感谢您的参与！<br />
                 评测结果已保存，建议您：
               </p>
               <ul className="text-left text-sm text-gray-600 mb-6 space-y-2">

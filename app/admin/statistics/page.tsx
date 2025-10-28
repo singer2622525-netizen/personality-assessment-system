@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, BarChart3, TrendingUp, Users, Target } from 'lucide-react'
-import { AssessmentSession } from '@/lib/types'
 import { calculatePositionMatch, getAllPositions } from '@/lib/positions'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
+import { AssessmentSession } from '@/lib/types'
+import { ArrowLeft, BarChart3, Target, TrendingUp, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 export default function StatisticsPage() {
   const router = useRouter()
@@ -58,11 +58,19 @@ export default function StatisticsPage() {
 
   const positionMatchData = getAllPositions().map(position => {
     const matches = sessions.map(session => {
-      const match = calculatePositionMatch(session.results!, position.id)
+      // Extract only numeric personality scores
+      const personalityScores: Record<string, number> = {
+        openness: session.results!.openness,
+        conscientiousness: session.results!.conscientiousness,
+        extraversion: session.results!.extraversion,
+        agreeableness: session.results!.agreeableness,
+        neuroticism: session.results!.neuroticism
+      }
+      const match = calculatePositionMatch(personalityScores, position.id)
       return match.matchScore
     })
     const avgMatch = matches.length > 0 ? matches.reduce((sum, score) => sum + score, 0) / matches.length : 0
-    
+
     return {
       position: position.name,
       matchScore: Math.round(avgMatch)
@@ -265,7 +273,7 @@ export default function StatisticsPage() {
                   const min = Math.min(...scores)
                   const variance = scores.reduce((sum, score) => sum + Math.pow(score - dimension.value, 2), 0) / scores.length
                   const stdDev = Math.sqrt(variance)
-                  
+
                   return (
                     <tr key={dimension.name} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

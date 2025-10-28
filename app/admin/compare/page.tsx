@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { ArrowLeft, Users, BarChart3, Download } from 'lucide-react'
-import { AssessmentSession } from '@/lib/types'
 import { calculatePositionMatch, getAllPositions } from '@/lib/positions'
-import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
+import { AssessmentSession } from '@/lib/types'
+import { ArrowLeft, BarChart3, Download, Users } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from 'recharts'
 
 export default function ComparePage() {
   const router = useRouter()
@@ -37,8 +37,8 @@ export default function ComparePage() {
   }
 
   const handleSessionToggle = (sessionId: string) => {
-    setSelectedSessions(prev => 
-      prev.includes(sessionId) 
+    setSelectedSessions(prev =>
+      prev.includes(sessionId)
         ? prev.filter(id => id !== sessionId)
         : [...prev, sessionId]
     )
@@ -68,7 +68,7 @@ export default function ComparePage() {
       alert('请先选择要对比的候选人')
       return
     }
-    
+
     // 这里可以实现导出功能
     alert('导出功能开发中...')
   }
@@ -129,11 +129,10 @@ export default function ComparePage() {
                 {sessions.map((session) => (
                   <div
                     key={session.id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      selectedSessions.includes(session.id)
+                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedSessions.includes(session.id)
                         ? 'border-orange-500 bg-orange-50'
                         : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                      }`}
                     onClick={() => handleSessionToggle(session.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -141,11 +140,10 @@ export default function ComparePage() {
                         <h3 className="font-medium text-gray-900">{session.candidateName}</h3>
                         <p className="text-sm text-gray-500">{session.candidateEmail}</p>
                       </div>
-                      <div className={`w-4 h-4 rounded-full border-2 ${
-                        selectedSessions.includes(session.id)
+                      <div className={`w-4 h-4 rounded-full border-2 ${selectedSessions.includes(session.id)
                           ? 'border-orange-500 bg-orange-500'
                           : 'border-gray-300'
-                      }`}>
+                        }`}>
                         {selectedSessions.includes(session.id) && (
                           <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                         )}
@@ -236,30 +234,36 @@ export default function ComparePage() {
                         <h3 className="font-medium text-gray-900 mb-3">{position.name}</h3>
                         <div className="space-y-2">
                           {selectedSessionsData.map(session => {
-                            const match = calculatePositionMatch(session.results!, position.id)
+                            // Extract only numeric personality scores
+                            const personalityScores: Record<string, number> = {
+                              openness: session.results!.openness,
+                              conscientiousness: session.results!.conscientiousness,
+                              extraversion: session.results!.extraversion,
+                              agreeableness: session.results!.agreeableness,
+                              neuroticism: session.results!.neuroticism
+                            }
+                            const match = calculatePositionMatch(personalityScores, position.id)
                             return (
                               <div key={session.id} className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">{session.candidateName}</span>
                                 <div className="flex items-center space-x-2">
                                   <div className="w-24 bg-gray-200 rounded-full h-2">
                                     <div
-                                      className={`h-2 rounded-full ${
-                                        match.matchScore >= 80 ? 'bg-green-500' :
-                                        match.matchScore >= 60 ? 'bg-yellow-500' :
-                                        match.matchScore >= 40 ? 'bg-orange-500' : 'bg-red-500'
-                                      }`}
+                                      className={`h-2 rounded-full ${match.matchScore >= 80 ? 'bg-green-500' :
+                                          match.matchScore >= 60 ? 'bg-yellow-500' :
+                                            match.matchScore >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                                        }`}
                                       style={{ width: `${match.matchScore}%` }}
                                     ></div>
                                   </div>
                                   <span className="text-sm font-medium text-gray-900 w-12">
                                     {match.matchScore}%
                                   </span>
-                                  <span className={`text-xs px-2 py-1 rounded-full ${
-                                    match.overallMatch === '优秀' ? 'bg-green-100 text-green-800' :
-                                    match.overallMatch === '良好' ? 'bg-yellow-100 text-yellow-800' :
-                                    match.overallMatch === '一般' ? 'bg-orange-100 text-orange-800' :
-                                    'bg-red-100 text-red-800'
-                                  }`}>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${match.overallMatch === '优秀' ? 'bg-green-100 text-green-800' :
+                                      match.overallMatch === '良好' ? 'bg-yellow-100 text-yellow-800' :
+                                        match.overallMatch === '一般' ? 'bg-orange-100 text-orange-800' :
+                                          'bg-red-100 text-red-800'
+                                    }`}>
                                     {match.overallMatch}
                                   </span>
                                 </div>
