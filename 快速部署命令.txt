@@ -1,0 +1,40 @@
+=== 🚀 快速部署命令 ===
+
+1. 上传压缩包到服务器：
+   scp 修复代码-部署包.tar.gz songtuo@192.168.13.44:~/
+
+2. SSH连接到服务器：
+   ssh songtuo@192.168.13.44
+
+3. 在服务器上执行：
+   # 解压
+   cd ~
+   tar -xzf 修复代码-部署包.tar.gz
+
+   # 进入解压目录
+   cd 修复代码-部署包
+
+   # 备份现有代码（重要！）
+   cd ~/personality-assessment  # 根据实际路径调整
+   cp -r app/api app/api.backup.$(date +%Y%m%d_%H%M%S)
+
+   # 复制修复文件
+   cp ~/修复代码-部署包/app/api/sessions/\[sessionId\]/submit/route.ts app/api/sessions/[sessionId]/submit/route.ts
+   cp ~/修复代码-部署包/app/api/sessions/\[sessionId\]/route.ts app/api/sessions/[sessionId]/route.ts
+   cp ~/修复代码-部署包/app/api/sessions/\[sessionId\]/answers/route.ts app/api/sessions/[sessionId]/answers/route.ts
+
+   # 重新构建
+   npm run build
+
+   # 重启服务
+   pm2 restart all
+   # 或
+   npm start
+
+4. 测试：
+   访问 http://192.168.13.44:3000
+   测试提交评测功能
+
+详细说明请查看：部署说明-SSH部署.md
+
+

@@ -1,0 +1,23 @@
+# 推送到 GitHub 的几种方式
+
+## 方式 1：使用 GitHub CLI（最简单）
+gh auth login
+git push origin main
+
+## 方式 2：使用 Personal Access Token
+# 1. 访问 https://github.com/settings/tokens 生成 token
+# 2. 执行以下命令（替换 YOUR_TOKEN）：
+git push https://YOUR_TOKEN@github.com/singer2622525-netizen/personality-assessment-system.git main
+
+## 方式 3：配置 SSH（推荐长期使用）
+# 1. 添加 GitHub 到 known_hosts：
+ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+# 2. 切换远程仓库为 SSH：
+git remote set-url origin git@github.com:singer2622525-netizen/personality-assessment-system.git
+
+# 3. 推送：
+git push origin main
+
+## 方式 4：使用 GitHub Desktop
+# 打开 GitHub Desktop，点击 "Push origin" 按钮

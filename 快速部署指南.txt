@@ -1,0 +1,40 @@
+=== 🚀 快速部署指南 ===
+
+1. 上传压缩包到服务器：
+   scp 完整部署包.tar.gz songtuo@192.168.13.44:~/
+
+2. SSH连接到服务器：
+   ssh songtuo@192.168.13.44
+
+3. 在服务器上执行：
+   # 备份现有项目
+   cd ~/personality-assessment  # 根据实际路径调整
+   cp -r . ../personality-assessment.backup.$(date +%Y%m%d_%H%M%S)
+
+   # 解压部署包
+   cd ~
+   tar -xzf 完整部署包.tar.gz
+
+   # 复制文件（保留data目录）
+   cp -r 招聘人格评测结果智能分析/app ~/personality-assessment/
+   cp -r 招聘人格评测结果智能分析/lib ~/personality-assessment/
+   cp 招聘人格评测结果智能分析/*.json ~/personality-assessment/
+   cp 招聘人格评测结果智能分析/*.js ~/personality-assessment/
+   cp 招聘人格评测结果智能分析/*.ts ~/personality-assessment/
+
+   # 重新构建
+   cd ~/personality-assessment
+   npm run build
+
+   # 重启服务
+   pm2 restart all
+   # 或
+   npm start
+
+4. 测试：
+   访问 http://192.168.13.44:3000
+   测试提交评测和管理员功能
+
+详细说明请查看：完整部署包-部署说明.md
+
+
