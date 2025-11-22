@@ -1,6 +1,6 @@
 {
   "name": "personality-assessment-system",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "5型人格评测系统 - 招聘专用",
   "main": "index.js",
   "scripts": {
@@ -10,25 +10,31 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "14.0.0",
-    "react": "18.0.0",
-    "react-dom": "18.0.0",
-    "typescript": "^5.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
-    "tailwindcss": "^3.3.0",
+    "@types/uuid": "^9.0.0",
     "autoprefixer": "^10.4.0",
-    "postcss": "^8.4.0",
-    "lucide-react": "^0.292.0",
-    "recharts": "^2.8.0",
-    "react-hook-form": "^7.47.0",
-    "jspdf": "^2.5.1",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^12.4.1",
     "html2canvas": "^1.4.1",
-    "uuid": "^9.0.1",
-    "@types/uuid": "^9.0.0"
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^2.5.1",
+    "lucide-react": "^0.292.0",
+    "next": "14.0.0",
+    "postcss": "^8.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.47.0",
+    "recharts": "^2.8.0",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5.0.0",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/jsonwebtoken": "^9.0.5",
     "eslint": "^8.0.0",
     "eslint-config-next": "^14.0.0"
   },
@@ -42,6 +48,3 @@
   "author": "Your Company",
   "license": "MIT"
 }
-
-
-

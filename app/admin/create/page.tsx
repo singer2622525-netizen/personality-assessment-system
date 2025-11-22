@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { sessionApi } from '@/lib/api-utils'
+import { getNameValidationError, getPhoneValidationError, validateChineseName, validateEmail, validatePhone } from '@/lib/utils'
+import { ArrowLeft, Briefcase, Mail, Phone, Send, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Send, User, Mail, Phone, Briefcase } from 'lucide-react'
-import { validatePhone, validateEmail, validateChineseName, getPhoneValidationError, getNameValidationError } from '@/lib/utils'
+import { useState } from 'react'
 
 export default function CreateAssessmentPage() {
   const router = useRouter()
@@ -25,10 +26,10 @@ export default function CreateAssessmentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // 重置错误信息
     setErrors({ candidateName: '', candidateEmail: '', candidatePhone: '', position: '' })
-    
+
     // 验证所有字段
     const newErrors = { candidateName: '', candidateEmail: '', candidatePhone: '', position: '' }
     let hasError = false
@@ -72,35 +73,26 @@ export default function CreateAssessmentPage() {
     }
 
     setIsLoading(true)
-    
+
     try {
-      // 生成会话ID
-      const sessionId = Math.random().toString(36).substring(2, 15)
-      
-      // 创建评测任务
-      const assessmentTask = {
-        id: sessionId,
+      // 通过API创建会话
+      const result = await sessionApi.create({
         candidateName: formData.candidateName,
         candidateEmail: formData.candidateEmail,
         candidatePhone: formData.candidatePhone,
         position: formData.position,
-        notes: formData.notes,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        assessmentUrl: `${window.location.origin}/assessment/${sessionId}`
-      }
+      })
 
-      // 保存到localStorage
-      localStorage.setItem(`assessmentTask_${sessionId}`, JSON.stringify(assessmentTask))
-      
+      const assessmentUrl = `${window.location.origin}/assessment/${result.sessionId}`
+
       // 显示成功信息
-      alert(`评测任务创建成功！\n\n候选人：${formData.candidateName}\n邮箱：${formData.candidateEmail}\n手机：${formData.candidatePhone}\n岗位：${formData.position}\n\n评测链接：${assessmentTask.assessmentUrl}\n\n请将此链接发送给候选人。`)
-      
+      alert(`评测任务创建成功！\n\n候选人：${formData.candidateName}\n邮箱：${formData.candidateEmail}\n手机：${formData.candidatePhone}\n岗位：${formData.position}\n\n评测链接：${assessmentUrl}\n\n请将此链接发送给候选人。`)
+
       // 返回管理后台
       router.push('/admin/dashboard')
-    } catch (error) {
+    } catch (error: any) {
       console.error('创建失败:', error)
-      alert('创建失败，请重试')
+      alert(error.message || '创建失败，请重试')
     } finally {
       setIsLoading(false)
     }
@@ -112,7 +104,7 @@ export default function CreateAssessmentPage() {
       ...formData,
       [name]: value
     })
-    
+
     // 清除对应字段的错误信息
     if (errors[name as keyof typeof errors]) {
       setErrors({
@@ -169,11 +161,10 @@ export default function CreateAssessmentPage() {
                       name="candidateName"
                       value={formData.candidateName}
                       onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${
-                        errors.candidateName 
-                          ? 'border-red-300 focus:ring-red-500' 
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${errors.candidateName
+                          ? 'border-red-300 focus:ring-red-500'
                           : 'border-gray-300 focus:ring-orange-500'
-                      }`}
+                        }`}
                       placeholder="请输入候选人中文姓名（2-4个字符）"
                       required
                     />
@@ -195,11 +186,10 @@ export default function CreateAssessmentPage() {
                       name="candidateEmail"
                       value={formData.candidateEmail}
                       onChange={handleInputChange}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${
-                        errors.candidateEmail 
-                          ? 'border-red-300 focus:ring-red-500' 
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${errors.candidateEmail
+                          ? 'border-red-300 focus:ring-red-500'
                           : 'border-gray-300 focus:ring-orange-500'
-                      }`}
+                        }`}
                       placeholder="请输入候选人邮箱地址"
                       required
                     />
@@ -222,11 +212,10 @@ export default function CreateAssessmentPage() {
                       value={formData.candidatePhone}
                       onChange={handleInputChange}
                       maxLength={11}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${
-                        errors.candidatePhone 
-                          ? 'border-red-300 focus:ring-red-500' 
+                      className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${errors.candidatePhone
+                          ? 'border-red-300 focus:ring-red-500'
                           : 'border-gray-300 focus:ring-orange-500'
-                      }`}
+                        }`}
                       placeholder="请输入11位中国手机号码"
                       required
                     />
@@ -253,11 +242,10 @@ export default function CreateAssessmentPage() {
                     name="position"
                     value={formData.position}
                     onChange={handleInputChange}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${
-                      errors.position 
-                        ? 'border-red-300 focus:ring-red-500' 
+                    className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:border-transparent ${errors.position
+                        ? 'border-red-300 focus:ring-red-500'
                         : 'border-gray-300 focus:ring-orange-500'
-                    }`}
+                      }`}
                     placeholder="请输入候选人应聘的岗位名称"
                     required
                   />

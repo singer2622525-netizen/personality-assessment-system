@@ -2,6 +2,7 @@
 
 import { getScoreColor, getScoreLevel } from '@/lib/assessment'
 import { AssessmentSession, DIMENSION_DESCRIPTIONS, PersonalityResults } from '@/lib/types'
+import { sessionApi } from '@/lib/api-utils'
 import { ArrowLeft, CheckCircle, Download, Home, Printer, Share2 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -17,31 +18,37 @@ export default function ResultsPage() {
   const [showExitModal, setShowExitModal] = useState(false)
 
   useEffect(() => {
-    // 从localStorage加载会话信息
-    const savedSession = localStorage.getItem('assessmentSession')
-    const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
+    const loadSession = async () => {
+      try {
+        const isAdmin = localStorage.getItem('adminLoggedIn') === 'true'
 
-    if (savedSession) {
-      const sessionData = JSON.parse(savedSession)
-      setSession(sessionData)
+        // 从API加载会话
+        const sessionData = await sessionApi.get(sessionId)
+        const formattedSession: AssessmentSession = {
+          ...sessionData,
+          createdAt: new Date(sessionData.createdAt),
+          completedAt: sessionData.completedAt ? new Date(sessionData.completedAt) : undefined,
+        }
+        setSession(formattedSession)
 
-      // 只有应聘者（非管理员）才显示退出提醒
-      if (sessionData.status === 'completed' && !isAdmin) {
-        console.log('应聘者评测已完成，2秒后显示退出提醒')
-        setTimeout(() => {
-          console.log('显示退出提醒对话框')
-          setShowExitModal(true)
-        }, 2000) // 2秒后自动显示退出提醒
-      } else if (isAdmin) {
-        console.log('管理员查看结果，不显示退出提醒')
-      } else {
-        console.log('评测状态:', sessionData.status)
+        // 只有应聘者（非管理员）才显示退出提醒
+        if (sessionData.status === 'completed' && !isAdmin) {
+          setTimeout(() => {
+            setShowExitModal(true)
+          }, 2000)
+        }
+      } catch (error: any) {
+        console.error('加载会话失败:', error)
+        alert(error.message || '加载数据失败')
+      } finally {
+        setIsLoading(false)
       }
-    } else {
-      console.log('未找到评测会话数据')
     }
-    setIsLoading(false)
-  }, [])
+
+    if (sessionId) {
+      loadSession()
+    }
+  }, [sessionId])
 
   // 页面离开前提醒
   useEffect(() => {
@@ -137,7 +144,7 @@ export default function ResultsPage() {
         <!-- 头部 -->
         <div style="text-align: center; border-bottom: 2px solid #f97316; padding-bottom: 20px; margin-bottom: 30px;">
           <h1 style="color: #f97316; margin: 0; font-size: 28px;">5型人格评测报告</h1>
-          <p style="margin: 5px 0; color: #666;">广州联创舞台设备有限公司</p>
+          <p style="margin: 5px 0; color: #666;">zgst</p>
           <p style="margin: 5px 0; color: #666;">生成时间：${currentDate}</p>
         </div>
 
@@ -257,7 +264,7 @@ export default function ResultsPage() {
         <!-- 页脚 -->
         <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #666; font-size: 12px;">
           <p>本报告基于5型人格理论生成，仅供参考</p>
-          <p>© 2024 广州联创舞台设备有限公司</p>
+          <p>© 2024 zgst</p>
         </div>
       </div>
     `
@@ -517,7 +524,7 @@ export default function ResultsPage() {
 <body>
     <div class="header">
         <h1>招聘分析报告</h1>
-        <p>广州联创舞台设备有限公司</p>
+        <p>zgst</p>
         <p>生成时间：${currentDate}</p>
     </div>
 
@@ -965,7 +972,7 @@ export default function ResultsPage() {
 
     <div class="footer">
         <p>本报告基于5型人格理论生成，仅供参考</p>
-        <p>© 2024 广州联创舞台设备有限公司</p>
+        <p>© 2024 zgst</p>
     </div>
 </body>
 </html>
@@ -1074,7 +1081,7 @@ export default function ResultsPage() {
 <body>
     <div class="header">
         <h1>5型人格评测结果</h1>
-        <p>广州联创舞台设备有限公司</p>
+        <p>zgst</p>
         <p>生成时间：${currentDate}</p>
     </div>
 
@@ -1125,7 +1132,7 @@ export default function ResultsPage() {
 
     <div class="footer">
         <p>本报告基于5型人格理论生成，仅供参考</p>
-        <p>© 2024 广州联创舞台设备有限公司</p>
+        <p>© 2024 zgst</p>
     </div>
 </body>
 </html>
@@ -1279,7 +1286,7 @@ export default function ResultsPage() {
 <body>
     <div class="header">
         <h1>5型人格评测报告</h1>
-        <p>广州联创舞台设备有限公司</p>
+        <p>zgst</p>
         <p>生成时间：${currentDate}</p>
     </div>
 
@@ -1387,7 +1394,7 @@ export default function ResultsPage() {
 
     <div class="footer">
         <p>本报告基于5型人格理论生成，仅供参考</p>
-        <p>© 2024 广州联创舞台设备有限公司</p>
+        <p>© 2024 zgst</p>
     </div>
 </body>
 </html>

@@ -25,7 +25,7 @@ export default function HomePage() {
             欢迎参加5型人格评测
           </h1>
           <p className="text-lg md:text-xl text-gray-600 mb-2">
-            广州联创舞台设备有限公司
+            zgst
           </p>
           <p className="text-sm md:text-lg text-gray-500 px-4">
             我们重视每一位候选人的成长与发展，通过科学的人格评测，为您提供更精准的职业发展建议
@@ -76,7 +76,7 @@ export default function HomePage() {
               我们关心您的成长
             </h3>
             <p className="text-sm md:text-lg text-gray-600 mb-4 md:mb-6 px-4">
-              广州联创舞台设备有限公司致力于为每一位员工提供良好的发展平台
+              zgst致力于为每一位员工提供良好的发展平台
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               <div className="text-center">
@@ -130,7 +130,7 @@ export default function HomePage() {
 
         {/* 页脚 */}
         <div className="text-center mt-8 text-gray-500">
-          <p>© 2024 广州联创舞台设备有限公司</p>
+          <p>© 2024 zgst</p>
         </div>
       </div>
     </div>

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { sessionApi } from '@/lib/api-utils'
+import { getNameValidationError, getPhoneValidationError, validateChineseName, validateEmail, validatePhone } from '@/lib/utils'
+import { ArrowRight, Briefcase, Mail, Phone, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Phone, ArrowRight, Briefcase } from 'lucide-react'
-import { generateUniqueId, validatePhone, validateEmail, validateChineseName, getPhoneValidationError, getNameValidationError } from '@/lib/utils'
+import { useState } from 'react'
 
 export default function AssessmentStartPage() {
   const router = useRouter()
@@ -23,10 +24,10 @@ export default function AssessmentStartPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     // 重置错误信息
     setErrors({ name: '', email: '', phone: '', position: '' })
-    
+
     // 验证所有字段
     const newErrors = { name: '', email: '', phone: '', position: '' }
     let hasError = false
@@ -70,26 +71,23 @@ export default function AssessmentStartPage() {
     }
 
     setIsLoading(true)
-    
-    // 生成会话ID和唯一ID
-    const sessionId = Math.random().toString(36).substring(2, 15)
-    const uniqueId = generateUniqueId(formData.name, formData.phone)
-    
-    // 保存会话信息到localStorage
-    localStorage.setItem('assessmentSession', JSON.stringify({
-      id: sessionId,
-      candidateName: formData.name,
-      candidateEmail: formData.email,
-      candidatePhone: formData.phone,
-      position: formData.position,
-      status: 'in_progress',
-      answers: [],
-      createdAt: new Date().toISOString(),
-      uniqueId: uniqueId
-    }))
 
-    // 跳转到评测页面
-    router.push(`/assessment/${sessionId}`)
+    try {
+      // 通过API创建会话
+      const result = await sessionApi.create({
+        candidateName: formData.name,
+        candidateEmail: formData.email,
+        candidatePhone: formData.phone,
+        position: formData.position,
+      })
+
+      // 跳转到评测页面
+      router.push(`/assessment/${result.sessionId}`)
+    } catch (error: any) {
+      console.error('创建会话失败:', error)
+      alert(error.message || '创建会话失败，请重试')
+      setIsLoading(false)
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -98,7 +96,7 @@ export default function AssessmentStartPage() {
       ...formData,
       [name]: value
     })
-    
+
     // 清除对应字段的错误信息
     if (errors[name as keyof typeof errors]) {
       setErrors({
@@ -139,11 +137,10 @@ export default function AssessmentStartPage() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${
-                    errors.name 
-                      ? 'border-red-300 focus:ring-red-500' 
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${errors.name
+                      ? 'border-red-300 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                    }`}
                   placeholder="请输入您的中文姓名（2-4个字符）"
                   required
                 />
@@ -165,11 +162,10 @@ export default function AssessmentStartPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${
-                    errors.email 
-                      ? 'border-red-300 focus:ring-red-500' 
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${errors.email
+                      ? 'border-red-300 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                    }`}
                   placeholder="请输入您的邮箱地址"
                   required
                 />
@@ -192,11 +188,10 @@ export default function AssessmentStartPage() {
                   value={formData.phone}
                   onChange={handleInputChange}
                   maxLength={11}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${
-                    errors.phone 
-                      ? 'border-red-300 focus:ring-red-500' 
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${errors.phone
+                      ? 'border-red-300 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                    }`}
                   placeholder="请输入11位中国手机号码"
                   required
                 />
@@ -218,11 +213,10 @@ export default function AssessmentStartPage() {
                   name="position"
                   value={formData.position}
                   onChange={handleInputChange}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${
-                    errors.position 
-                      ? 'border-red-300 focus:ring-red-500' 
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-lg focus:ring-2 focus:border-transparent text-sm md:text-base ${errors.position
+                      ? 'border-red-300 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                    }`}
                   placeholder="请输入您应聘的岗位名称"
                   required
                 />

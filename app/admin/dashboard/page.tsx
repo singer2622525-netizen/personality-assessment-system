@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { requireAuth, getCurrentAdmin, logoutAdmin } from '@/lib/auth'
-import { 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Plus, 
-  Eye, 
+import { sessionApi } from '@/lib/api-utils'
+import {
+  Users,
+  FileText,
+  BarChart3,
+  Plus,
+  Eye,
   Download,
   Search,
   Filter,
@@ -30,45 +31,53 @@ export default function AdminDashboard() {
     if (!requireAuth()) {
       return
     }
-    
+
     // 获取当前管理员信息
     const admin = getCurrentAdmin()
     setCurrentAdmin(admin)
-    
+
     // 加载数据
     loadSessions()
   }, [])
 
-  const loadSessions = () => {
-    // 从localStorage加载所有会话
-    const allSessions: AssessmentSession[] = []
-    
-    // 检查所有localStorage键
-    console.log('检查localStorage中的所有键:')
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      console.log(`键 ${i}: ${key}`)
-      
-      if (key?.startsWith('assessmentTask_') || key === 'assessmentSession') {
-        try {
-          const session = JSON.parse(localStorage.getItem(key) || '{}')
-          console.log(`加载会话数据:`, session)
-          allSessions.push(session)
-        } catch (error) {
-          console.error('解析会话数据失败:', error)
-        }
-      }
+  const loadSessions = async () => {
+    try {
+      // 从API获取所有会话
+      const allSessions = await sessionApi.getAll()
+
+      // 转换为AssessmentSession格式
+      const formattedSessions: AssessmentSession[] = allSessions.map((s: any) => ({
+        id: s.id,
+        candidateName: s.candidateName,
+        candidateEmail: s.candidateEmail,
+        candidatePhone: s.candidatePhone,
+        position: s.position,
+        status: s.status,
+        answers: s.answers || [],
+        results: s.results || undefined,
+        createdAt: new Date(s.createdAt),
+        completedAt: s.completedAt ? new Date(s.completedAt) : undefined,
+        uniqueId: s.uniqueId,
+      }))
+
+      setSessions(formattedSessions)
+    } catch (error: any) {
+      console.error('加载会话失败:', error)
+      alert(error.message || '加载数据失败')
+    } finally {
+      setIsLoading(false)
     }
-    
-    console.log(`总共加载了 ${allSessions.length} 个会话`)
-    setSessions(allSessions)
-    setIsLoading(false)
   }
 
   const filteredSessions = sessions.filter(session => {
-    const matchesSearch = session.candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         session.candidatePhone.includes(searchTerm)
+    // 防御性编程：处理可能的 undefined 值
+    const candidateName = session.candidateName || ''
+    const candidateEmail = session.candidateEmail || ''
+    const candidatePhone = session.candidatePhone || ''
+
+    const matchesSearch = candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         candidatePhone.includes(searchTerm)
     const matchesFilter = filterStatus === 'all' || session.status === filterStatus
     return matchesSearch && matchesFilter
   })

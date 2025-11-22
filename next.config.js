@@ -4,18 +4,12 @@ const nextConfig = {
   images: {
     domains: ['localhost'],
   },
-  env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
-  // 开发环境配置
-  experimental: {
-    allowedDevOrigins: ['192.168.0.155'], // 允许开发环境跨域访问
-  },
   // 生产环境配置
   output: 'standalone', // 用于Docker部署
+  // 确保静态资源路径正确
+  assetPrefix: process.env.NODE_ENV === 'production' ? undefined : undefined,
+  // 确保basePath正确
+  basePath: '',
 }
 
 module.exports = nextConfig
-
-
-

@@ -1,5 +1,6 @@
 'use client'
 
+import { sessionApi } from '@/lib/api-utils'
 import { calculatePositionMatch, getAllPositions } from '@/lib/positions'
 import { AssessmentSession } from '@/lib/types'
 import { ArrowLeft, BarChart3, Download, Users } from 'lucide-react'
@@ -17,23 +18,31 @@ export default function ComparePage() {
     loadSessions()
   }, [])
 
-  const loadSessions = () => {
-    const allSessions: AssessmentSession[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('assessmentSession')) {
-        try {
-          const session = JSON.parse(localStorage.getItem(key) || '{}')
-          if (session.results) {
-            allSessions.push(session)
-          }
-        } catch (error) {
-          console.error('解析会话数据失败:', error)
-        }
-      }
+  const loadSessions = async () => {
+    try {
+      const allSessions = await sessionApi.getAll()
+      const formattedSessions: AssessmentSession[] = allSessions
+        .filter((s: any) => s.results) // 只显示有结果的会话
+        .map((s: any) => ({
+          id: s.id,
+          candidateName: s.candidateName,
+          candidateEmail: s.candidateEmail,
+          candidatePhone: s.candidatePhone,
+          position: s.position,
+          status: s.status,
+          answers: s.answers || [],
+          results: s.results || undefined,
+          createdAt: new Date(s.createdAt),
+          completedAt: s.completedAt ? new Date(s.completedAt) : undefined,
+          uniqueId: s.uniqueId,
+        }))
+      setSessions(formattedSessions)
+    } catch (error: any) {
+      console.error('加载会话失败:', error)
+      alert(error.message || '加载数据失败')
+    } finally {
+      setIsLoading(false)
     }
-    setSessions(allSessions)
-    setIsLoading(false)
   }
 
   const handleSessionToggle = (sessionId: string) => {
@@ -130,8 +139,8 @@ export default function ComparePage() {
                   <div
                     key={session.id}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedSessions.includes(session.id)
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                      ? 'border-orange-500 bg-orange-50'
+                      : 'border-gray-200 hover:border-gray-300'
                       }`}
                     onClick={() => handleSessionToggle(session.id)}
                   >
@@ -141,8 +150,8 @@ export default function ComparePage() {
                         <p className="text-sm text-gray-500">{session.candidateEmail}</p>
                       </div>
                       <div className={`w-4 h-4 rounded-full border-2 ${selectedSessions.includes(session.id)
-                          ? 'border-orange-500 bg-orange-500'
-                          : 'border-gray-300'
+                        ? 'border-orange-500 bg-orange-500'
+                        : 'border-gray-300'
                         }`}>
                         {selectedSessions.includes(session.id) && (
                           <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
@@ -250,8 +259,8 @@ export default function ComparePage() {
                                   <div className="w-24 bg-gray-200 rounded-full h-2">
                                     <div
                                       className={`h-2 rounded-full ${match.matchScore >= 80 ? 'bg-green-500' :
-                                          match.matchScore >= 60 ? 'bg-yellow-500' :
-                                            match.matchScore >= 40 ? 'bg-orange-500' : 'bg-red-500'
+                                        match.matchScore >= 60 ? 'bg-yellow-500' :
+                                          match.matchScore >= 40 ? 'bg-orange-500' : 'bg-red-500'
                                         }`}
                                       style={{ width: `${match.matchScore}%` }}
                                     ></div>
@@ -260,9 +269,9 @@ export default function ComparePage() {
                                     {match.matchScore}%
                                   </span>
                                   <span className={`text-xs px-2 py-1 rounded-full ${match.overallMatch === '优秀' ? 'bg-green-100 text-green-800' :
-                                      match.overallMatch === '良好' ? 'bg-yellow-100 text-yellow-800' :
-                                        match.overallMatch === '一般' ? 'bg-orange-100 text-orange-800' :
-                                          'bg-red-100 text-red-800'
+                                    match.overallMatch === '良好' ? 'bg-yellow-100 text-yellow-800' :
+                                      match.overallMatch === '一般' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-red-100 text-red-800'
                                     }`}>
                                     {match.overallMatch}
                                   </span>

@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
+import { sessionApi } from '@/lib/api-utils'
 import { QUESTIONS } from '@/lib/questions'
 import { Answer, AssessmentSession } from '@/lib/types'
-import { calculatePersonalityScores } from '@/lib/assessment'
+import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 
 export default function AssessmentPage() {
   const router = useRouter()
@@ -21,36 +21,54 @@ export default function AssessmentPage() {
   const currentQuestion = QUESTIONS[currentQuestionIndex]
   const progress = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100
 
+  // 加载会话
   useEffect(() => {
-    // 从localStorage加载会话信息
-    const savedSession = localStorage.getItem('assessmentSession')
-    if (savedSession) {
-      const sessionData = JSON.parse(savedSession)
-      setSession(sessionData)
-      setAnswers(sessionData.answers || [])
+    const loadSession = async () => {
+      try {
+        const sessionData = await sessionApi.get(sessionId)
+        setSession({
+          ...sessionData,
+          createdAt: new Date(sessionData.createdAt),
+          completedAt: sessionData.completedAt ? new Date(sessionData.completedAt) : undefined,
+        } as AssessmentSession)
+        setAnswers(sessionData.answers || [])
+      } catch (error: any) {
+        console.error('加载会话失败:', error)
+        alert('加载会话失败，请重试')
+      } finally {
+        setIsLoading(false)
+      }
     }
-    setIsLoading(false)
-  }, [])
+
+    if (sessionId) {
+      loadSession()
+    }
+  }, [sessionId])
+
+  // 保存答案（防抖）
+  const saveAnswersDebounced = useCallback(async (answersToSave: Answer[]) => {
+    try {
+      await sessionApi.saveAnswers(sessionId, answersToSave)
+    } catch (error) {
+      console.error('保存答案失败:', error)
+      // 不显示错误，避免干扰用户
+    }
+  }, [sessionId])
 
   useEffect(() => {
-    // 保存进度到localStorage
-    if (session) {
-      const updatedSession: AssessmentSession = {
-        ...session,
-        answers,
-        status: (answers.length === QUESTIONS.length ? 'completed' : 'in_progress') as 'pending' | 'in_progress' | 'completed'
-      }
-      localStorage.setItem('assessmentSession', JSON.stringify(updatedSession))
-      // 避免无限循环，只在状态真正改变时更新
-      if (JSON.stringify(updatedSession) !== JSON.stringify(session)) {
-        setSession(updatedSession)
-      }
+    // 防抖保存答案
+    if (answers.length > 0 && session) {
+      const timer = setTimeout(() => {
+        saveAnswersDebounced(answers)
+      }, 1000) // 1秒后保存
+
+      return () => clearTimeout(timer)
     }
-  }, [answers]) // 移除session依赖，避免循环
+  }, [answers, session, saveAnswersDebounced])
 
   const handleAnswerSelect = (score: number) => {
     const existingAnswerIndex = answers.findIndex(a => a.questionId === currentQuestion.id)
-    
+
     if (existingAnswerIndex >= 0) {
       // 更新现有答案
       const updatedAnswers = [...answers]
@@ -81,42 +99,16 @@ export default function AssessmentPage() {
     }
 
     setIsSubmitting(true)
-    
+
     try {
-      // 计算结果
-      const results = calculatePersonalityScores(answers)
-      
-      // 更新会话
-      const completedSession = {
-        ...session!,
-        answers,
-        results,
-        status: 'completed' as const,
-        completedAt: new Date().toISOString()
-      }
-      
-      localStorage.setItem('assessmentSession', JSON.stringify(completedSession))
-      
-      // 同时更新管理员后台的任务数据
-      const taskKey = `assessmentTask_${sessionId}`
-      const existingTask = localStorage.getItem(taskKey)
-      if (existingTask) {
-        const taskData = JSON.parse(existingTask)
-        const updatedTask = {
-          ...taskData,
-          status: 'completed',
-          completedAt: new Date().toISOString(),
-          results: results
-        }
-        localStorage.setItem(taskKey, JSON.stringify(updatedTask))
-      }
-      
+      // 通过API提交评测
+      await sessionApi.submit(sessionId, answers)
+
       // 跳转到结果页面
       router.push(`/assessment/${sessionId}/results`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('提交失败:', error)
-      alert('提交失败，请重试')
-    } finally {
+      alert(error.message || '提交失败，请重试')
       setIsSubmitting(false)
     }
   }
@@ -179,25 +171,23 @@ export default function AssessmentPage() {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               {currentQuestion.text}
             </h2>
-            
+
             {/* 选项 */}
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((score) => (
                 <button
                   key={score}
                   onClick={() => handleAnswerSelect(score)}
-                  className={`w-full p-4 text-left border-2 rounded-lg transition-all ${
-                    getCurrentAnswer() === score
+                  className={`w-full p-4 text-left border-2 rounded-lg transition-all ${getCurrentAnswer() === score
                       ? 'border-blue-500 bg-blue-50 text-blue-900'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center">
-                    <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                      getCurrentAnswer() === score
+                    <div className={`w-4 h-4 rounded-full border-2 mr-3 ${getCurrentAnswer() === score
                         ? 'border-blue-500 bg-blue-500'
                         : 'border-gray-300'
-                    }`}>
+                      }`}>
                       {getCurrentAnswer() === score && (
                         <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
                       )}
@@ -255,5 +245,3 @@ export default function AssessmentPage() {
     </div>
   )
 }
-
-

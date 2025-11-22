@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { authApi } from '@/lib/api-utils'
+import { ArrowLeft, Eye, EyeOff, Lock, Mail, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, User, Lock, Mail, Eye, EyeOff } from 'lucide-react'
-import { createDefaultAdmin } from '@/lib/auth'
+import { useState } from 'react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -18,10 +18,6 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    // 创建默认管理员账户
-    createDefaultAdmin()
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,68 +29,53 @@ export default function AdminLoginPage() {
         // 登录逻辑
         if (!formData.username || !formData.password) {
           setError('请填写用户名和密码')
+          setIsLoading(false)
           return
         }
 
-        // 简单的本地验证（实际项目中应该连接后端）
-        const savedUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]')
-        const user = savedUsers.find((u: any) => 
-          u.username === formData.username && u.password === formData.password
-        )
+        // 通过API登录
+        const result = await authApi.login(formData.username, formData.password)
 
-        if (user) {
-          // 保存登录状态
-          localStorage.setItem('adminLoggedIn', 'true')
-          localStorage.setItem('currentAdmin', JSON.stringify(user))
-          router.push('/admin/dashboard')
-        } else {
-          setError('用户名或密码错误')
-        }
+        // 保存token和用户信息
+        localStorage.setItem('auth_token', result.token)
+        localStorage.setItem('adminLoggedIn', 'true')
+        localStorage.setItem('currentAdmin', JSON.stringify(result.user))
+
+        router.push('/admin/dashboard')
       } else {
         // 注册逻辑
         if (!formData.username || !formData.email || !formData.password) {
           setError('请填写完整信息')
+          setIsLoading(false)
           return
         }
 
         if (formData.password !== formData.confirmPassword) {
           setError('两次输入的密码不一致')
+          setIsLoading(false)
           return
         }
 
         if (formData.password.length < 6) {
           setError('密码长度至少6位')
+          setIsLoading(false)
           return
         }
 
-        // 检查用户名是否已存在
-        const savedUsers = JSON.parse(localStorage.getItem('adminUsers') || '[]')
-        const existingUser = savedUsers.find((u: any) => u.username === formData.username)
-        
-        if (existingUser) {
-          setError('用户名已存在')
-          return
-        }
-
-        // 保存新用户
-        const newUser = {
-          id: Date.now().toString(),
+        // 通过API注册
+        await authApi.register({
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          createdAt: new Date().toISOString()
-        }
+        })
 
-        savedUsers.push(newUser)
-        localStorage.setItem('adminUsers', JSON.stringify(savedUsers))
-        
         alert('注册成功！请使用新账户登录。')
         setIsLogin(true)
         setFormData({ username: '', email: '', password: '', confirmPassword: '' })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('操作失败:', error)
-      setError('操作失败，请重试')
+      setError(error.message || '操作失败，请重试')
     } finally {
       setIsLoading(false)
     }

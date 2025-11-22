@@ -1,5 +1,6 @@
 'use client'
 
+import { sessionApi } from '@/lib/api-utils'
 import { calculatePositionMatch, getAllPositions } from '@/lib/positions'
 import { AssessmentSession } from '@/lib/types'
 import { ArrowLeft, BarChart3, Target, TrendingUp, Users } from 'lucide-react'
@@ -16,23 +17,31 @@ export default function StatisticsPage() {
     loadSessions()
   }, [])
 
-  const loadSessions = () => {
-    const allSessions: AssessmentSession[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('assessmentSession')) {
-        try {
-          const session = JSON.parse(localStorage.getItem(key) || '{}')
-          if (session.results) {
-            allSessions.push(session)
-          }
-        } catch (error) {
-          console.error('解析会话数据失败:', error)
-        }
-      }
+  const loadSessions = async () => {
+    try {
+      const allSessions = await sessionApi.getAll()
+      const formattedSessions: AssessmentSession[] = allSessions
+        .filter((s: any) => s.results) // 只显示有结果的会话
+        .map((s: any) => ({
+          id: s.id,
+          candidateName: s.candidateName,
+          candidateEmail: s.candidateEmail,
+          candidatePhone: s.candidatePhone,
+          position: s.position,
+          status: s.status,
+          answers: s.answers || [],
+          results: s.results || undefined,
+          createdAt: new Date(s.createdAt),
+          completedAt: s.completedAt ? new Date(s.completedAt) : undefined,
+          uniqueId: s.uniqueId,
+        }))
+      setSessions(formattedSessions)
+    } catch (error: any) {
+      console.error('加载会话失败:', error)
+      alert(error.message || '加载数据失败')
+    } finally {
+      setIsLoading(false)
     }
-    setSessions(allSessions)
-    setIsLoading(false)
   }
 
   // 计算统计数据
