@@ -1,22 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { requireAuth, getCurrentAdmin, logoutAdmin } from '@/lib/auth'
 import { sessionApi } from '@/lib/api-utils'
-import {
-  Users,
-  FileText,
-  BarChart3,
-  Plus,
-  Eye,
-  Download,
-  Search,
-  Filter,
-  Calendar,
-  TrendingUp
-} from 'lucide-react'
+import { getCurrentAdmin, logoutAdmin, requireAuth } from '@/lib/auth'
 import { AssessmentSession } from '@/lib/types'
+import {
+  BarChart3,
+  Calendar,
+  Download,
+  Eye,
+  FileText,
+  Filter,
+  Plus,
+  Search,
+  TrendingUp,
+  Users
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -38,6 +38,21 @@ export default function AdminDashboard() {
 
     // 加载数据
     loadSessions()
+
+    // 添加页面可见性检测，当页面重新可见时刷新数据
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadSessions()
+      }
+    }
+
+    // 监听页面可见性变化
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // 清理事件监听器
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
   }, [])
 
   const loadSessions = async () => {
@@ -76,8 +91,8 @@ export default function AdminDashboard() {
     const candidatePhone = session.candidatePhone || ''
 
     const matchesSearch = candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidatePhone.includes(searchTerm)
+      candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      candidatePhone.includes(searchTerm)
     const matchesFilter = filterStatus === 'all' || session.status === filterStatus
     return matchesSearch && matchesFilter
   })

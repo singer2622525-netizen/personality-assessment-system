@@ -1,8 +1,8 @@
 'use client'
 
+import { sessionApi } from '@/lib/api-utils'
 import { getScoreColor, getScoreLevel } from '@/lib/assessment'
 import { AssessmentSession, DIMENSION_DESCRIPTIONS, PersonalityResults } from '@/lib/types'
-import { sessionApi } from '@/lib/api-utils'
 import { ArrowLeft, CheckCircle, Download, Home, Printer, Share2 } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -84,6 +84,9 @@ export default function ResultsPage() {
     const printStyles = `
       <style>
         @media print {
+          @page {
+            margin: 15mm;
+          }
           body * {
             visibility: hidden;
           }
@@ -96,6 +99,8 @@ export default function ResultsPage() {
             top: 0;
             width: 100%;
             background: white;
+            padding: 0;
+            margin: 0;
           }
           .no-print {
             display: none !important;
@@ -107,28 +112,39 @@ export default function ResultsPage() {
             page-break-inside: avoid;
           }
         }
+        @media screen {
+          .print-content {
+            display: none;
+          }
+        }
       </style>
     `
 
-    // 创建打印内容
+    // 创建打印内容容器
     const printContent = document.createElement('div')
     printContent.className = 'print-content'
     printContent.innerHTML = generatePrintContent()
 
-    // 添加打印样式
-    const styleElement = document.createElement('div')
+    // 创建样式元素
+    const styleElement = document.createElement('style')
     styleElement.innerHTML = printStyles
 
     // 临时添加到页面
-    document.body.appendChild(styleElement)
+    document.head.appendChild(styleElement)
     document.body.appendChild(printContent)
 
     // 执行打印
     window.print()
 
-    // 清理临时元素
-    document.body.removeChild(styleElement)
-    document.body.removeChild(printContent)
+    // 延迟清理，确保打印完成
+    setTimeout(() => {
+      if (document.head.contains(styleElement)) {
+        document.head.removeChild(styleElement)
+      }
+      if (document.body.contains(printContent)) {
+        document.body.removeChild(printContent)
+      }
+    }, 1000)
   }
 
   // 生成打印内容
@@ -240,22 +256,52 @@ export default function ResultsPage() {
           </div>
         </div>
 
+        <!-- 职业能力分析 - 仅管理员显示 -->
+        <div style="margin-bottom: 30px;" class="avoid-break">
+          <h2 style="color: #f97316; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; margin-bottom: 20px;">职业能力分析</h2>
+          ${generateDetailedCareerAnalysis(session.results)}
+        </div>
+
         <!-- 招聘建议 - 仅管理员显示 -->
         <div style="margin-bottom: 30px;" class="avoid-break">
           <h2 style="color: #f97316; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; margin-bottom: 20px;">招聘建议</h2>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 15px 0;">
+            ${(session.results.strengths && session.results.strengths.length > 0) || (session.results.weaknesses && session.results.weaknesses.length > 0) || (session.results.recommendations && session.results.recommendations.length > 0) ? `
+            ${session.results.strengths && session.results.strengths.length > 0 ? `
+            <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">✅ 优势特征</h3>
+            <ul style="list-style: disc; padding-left: 20px;">
+              ${session.results.strengths.map(strength => `<li style="margin: 5px 0;">${strength}</li>`).join('')}
+            </ul>
+            ` : ''}
+            ${session.results.weaknesses && session.results.weaknesses.length > 0 ? `
+            <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">⚠️ 待提升方面</h3>
+            <ul style="list-style: disc; padding-left: 20px;">
+              ${session.results.weaknesses.map(weakness => `<li style="margin: 5px 0;">${weakness}</li>`).join('')}
+            </ul>
+            ` : ''}
+            ${session.results.recommendations && session.results.recommendations.length > 0 ? `
+            <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">💼 职业建议</h3>
+            <ul style="list-style: disc; padding-left: 20px;">
+              ${session.results.recommendations.map(recommendation => `<li style="margin: 5px 0;">${recommendation}</li>`).join('')}
+            </ul>
+            ` : ''}
+            ` : `
+            <p style="color: #666;">各人格维度发展较为均衡，建议根据具体岗位要求和候选人专业技能进行综合评估</p>
+            `}
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">面试建议</h3>
-            <ul>
-              <li>重点关注候选人的专业技能和实际工作经验</li>
-              <li>评估候选人与岗位要求的匹配度</li>
-              <li>了解候选人的职业发展规划</li>
+            <ul style="list-style: disc; padding-left: 20px;">
+              <li style="margin: 5px 0;">重点关注候选人的专业技能和实际工作经验</li>
+              <li style="margin: 5px 0;">评估候选人与岗位要求的匹配度</li>
+              <li style="margin: 5px 0;">了解候选人的职业发展规划</li>
+              ${session.results.weaknesses && session.results.weaknesses.length > 0 ? session.results.weaknesses.slice(0, 2).map(weakness => `<li style="margin: 5px 0;">如何提升${weakness.split('：')[0]}</li>`).join('') : ''}
             </ul>
 
             <h3 style="color: #333; margin-top: 25px; margin-bottom: 15px;">入职建议</h3>
-            <ul>
-              <li>提供适当的培训和指导</li>
-              <li>建立有效的反馈机制</li>
-              <li>安排合适的导师或同事支持</li>
+            <ul style="list-style: disc; padding-left: 20px;">
+              <li style="margin: 5px 0;">提供适当的培训和指导</li>
+              <li style="margin: 5px 0;">建立有效的反馈机制</li>
+              <li style="margin: 5px 0;">安排合适的导师或同事支持</li>
+              ${session.results.weaknesses && session.results.weaknesses.length > 0 ? `<li style="margin: 5px 0;">针对待提升方面制定个性化发展计划</li>` : ''}
             </ul>
           </div>
         </div>
@@ -265,6 +311,174 @@ export default function ResultsPage() {
         <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #666; font-size: 12px;">
           <p>本报告基于5型人格理论生成，仅供参考</p>
           <p>© 2024 zgst</p>
+        </div>
+      </div>
+    `
+  }
+
+  // 生成详细的职业能力分析（用于打印）
+  const generateDetailedCareerAnalysis = (results: PersonalityResults) => {
+    return `
+      <div style="background: #f3e8ff; padding: 20px; border-radius: 8px; margin: 15px 0;">
+        <!-- 沟通能力分析 -->
+        <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3b82f6;">
+          <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">🗣️ 沟通与人际交往能力</h4>
+          <div style="font-size: 14px; color: #666;">
+            ${results.extraversion >= 4 ? `
+              <p style="margin-bottom: 10px;"><strong>优势：</strong>热情外向，善于表达，喜欢与人互动</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>适合需要频繁人际互动的岗位：销售、公共关系、客户服务、市场推广</li>
+                <li>在团队中能够活跃气氛，促进团队凝聚力</li>
+                <li>善于建立和维护客户关系，适合对外沟通工作</li>
+                <li>在会议和演讲中表现自信，能够有效传达信息</li>
+              </ul>
+            ` : results.extraversion <= 2 ? `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>内向谨慎，偏好深度思考，不善于频繁社交</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>适合需要专注和独立工作的岗位：研究、数据分析、编程、技术开发</li>
+                <li>在需要深度思考的问题上表现突出</li>
+                <li>一对一沟通效果较好，但大型会议可能表现拘谨</li>
+                <li>书面沟通能力强，适合技术文档编写</li>
+              </ul>
+            ` : `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>社交能力适中，能够平衡独立工作与团队协作</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>适应性强，既能独立工作也能团队协作</li>
+                <li>在需要适度沟通的岗位中表现良好</li>
+                <li>能够根据工作需求调整沟通方式</li>
+              </ul>
+            `}
+          </div>
+        </div>
+
+        <!-- 管理能力分析 -->
+        <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #10b981;">
+          <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">👥 管理与领导能力</h4>
+          <div style="font-size: 14px; color: #666;">
+            ${results.conscientiousness >= 4 && results.agreeableness >= 3 ? `
+              <p style="margin-bottom: 10px;"><strong>优势：</strong>具备优秀的管理潜质</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>责任心强，执行力高，能够有效组织和管理团队</li>
+                <li>善于制定计划，目标导向明确</li>
+                <li>团队合作意识强，能够协调团队成员关系</li>
+                <li>适合管理岗位：项目经理、部门主管、团队领导</li>
+                <li>在需要高度责任感的岗位中表现突出</li>
+              </ul>
+            ` : results.conscientiousness >= 4 ? `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>执行力强，但可能缺乏团队协调能力</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>个人执行力强，能够高效完成工作任务</li>
+                <li>适合需要高度责任感的岗位：会计、审计、质量控制</li>
+                <li>在需要独立决策的岗位中表现良好</li>
+                <li>可能需要提升团队协作和沟通技巧</li>
+              </ul>
+            ` : `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>灵活性高，但需要提升组织管理能力</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>适应性强，能够快速应对变化</li>
+                <li>适合需要创新和灵活性的岗位：创意设计、市场策划</li>
+                <li>在需要标准化管理的岗位中可能需要更多指导</li>
+                <li>建议通过培训提升时间管理和组织能力</li>
+              </ul>
+            `}
+          </div>
+        </div>
+
+        <!-- 数字分析能力 -->
+        <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #f59e0b;">
+          <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">📊 数字分析与逻辑思维能力</h4>
+          <div style="font-size: 14px; color: #666;">
+            ${results.conscientiousness >= 4 && results.neuroticism <= 2 ? `
+              <p style="margin-bottom: 10px;"><strong>优势：</strong>具备优秀的数字分析能力</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>逻辑思维清晰，能够处理复杂的数字分析任务</li>
+                <li>情绪稳定，能够在压力下保持冷静分析</li>
+                <li>适合数据分析、财务分析、统计研究等岗位</li>
+                <li>在需要精确计算和逻辑推理的工作中表现突出</li>
+                <li>能够独立完成复杂的数据处理任务</li>
+              </ul>
+            ` : results.openness >= 4 ? `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>创新思维强，但可能缺乏系统性分析</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>思维活跃，能够从不同角度分析问题</li>
+                <li>适合需要创新思维的分析工作：市场研究、产品开发</li>
+                <li>在需要标准化数据分析的岗位中可能需要更多训练</li>
+                <li>建议通过培训提升系统性分析能力</li>
+              </ul>
+            ` : `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>分析能力适中，需要根据具体岗位要求评估</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>能够完成基本的数字分析任务</li>
+                <li>在需要深度分析的工作中可能需要更多支持</li>
+                <li>适合中等复杂度的分析工作</li>
+              </ul>
+            `}
+          </div>
+        </div>
+
+        <!-- 情商分析 -->
+        <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #ec4899;">
+          <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">💝 情商与情绪管理能力</h4>
+          <div style="font-size: 14px; color: #666;">
+            ${results.agreeableness >= 4 && results.neuroticism <= 2 ? `
+              <p style="margin-bottom: 10px;"><strong>优势：</strong>情商较高，情绪管理能力强</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>善于理解他人情感，具有强烈的同理心</li>
+                <li>情绪稳定，能够在压力下保持冷静</li>
+                <li>适合需要高人际敏感度的岗位：人力资源、心理咨询、客户服务</li>
+                <li>在团队中能够有效调解冲突，促进团队和谐</li>
+                <li>能够敏锐察觉他人情绪变化，提供适当支持</li>
+              </ul>
+            ` : results.neuroticism >= 4 ? `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>情感丰富，但情绪波动较大</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>情感敏感度高，能够深刻理解他人情感</li>
+                <li>适合需要高度同理心的岗位：艺术创作、心理咨询、护理</li>
+                <li>在高压环境下可能需要更多情绪支持</li>
+                <li>建议通过培训提升情绪调节能力</li>
+              </ul>
+            ` : `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>情绪管理能力适中</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>能够处理一般的情绪管理任务</li>
+                <li>在需要高情商的岗位中可能需要更多发展</li>
+                <li>适合大多数常规工作环境</li>
+              </ul>
+            `}
+          </div>
+        </div>
+
+        <!-- 创新与适应能力 -->
+        <div style="background: white; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #8b5cf6;">
+          <h4 style="font-weight: bold; color: #333; margin-bottom: 10px;">🚀 创新与适应能力</h4>
+          <div style="font-size: 14px; color: #666;">
+            ${results.openness >= 4 ? `
+              <p style="margin-bottom: 10px;"><strong>优势：</strong>创新思维强，适应能力强</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>富有想象力和创造力，乐于接受新事物</li>
+                <li>适合需要创新和创造力的岗位：研发、设计、市场策划、艺术创作</li>
+                <li>能够快速适应变化，在变革中表现突出</li>
+                <li>善于提出新颖的解决方案</li>
+                <li>在需要突破传统思维的工作中表现优秀</li>
+              </ul>
+            ` : results.openness <= 2 ? `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>传统务实，偏好稳定</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>偏好传统和熟悉的工作方式</li>
+                <li>适合需要遵循标准流程的岗位：行政、会计、法律、质量控制</li>
+                <li>在需要稳定性和可靠性的工作中表现良好</li>
+                <li>能够严格执行既定程序和标准</li>
+                <li>在快速变化的环境中可能需要更多适应时间</li>
+              </ul>
+            ` : `
+              <p style="margin-bottom: 10px;"><strong>特点：</strong>平衡发展，适应性强</p>
+              <ul style="list-style: disc; padding-left: 20px;">
+                <li>能够在创新与传统之间找到平衡</li>
+                <li>适应性强，能够根据工作需要调整思维方式</li>
+                <li>适合大多数常规工作环境</li>
+              </ul>
+            `}
+          </div>
         </div>
       </div>
     `
@@ -1702,7 +1916,7 @@ export default function ResultsPage() {
                 <h3 className="text-lg font-semibold text-orange-900 mb-3">招聘建议</h3>
                 <div className="space-y-4">
                   {/* 优势特征 */}
-                  {results.strengths.length > 0 && (
+                  {results.strengths && results.strengths.length > 0 ? (
                     <div>
                       <h4 className="font-medium text-green-800 mb-2">✅ 优势特征</h4>
                       <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
@@ -1711,10 +1925,15 @@ export default function ResultsPage() {
                         ))}
                       </ul>
                     </div>
+                  ) : (
+                    <div>
+                      <h4 className="font-medium text-green-800 mb-2">✅ 优势特征</h4>
+                      <p className="text-sm text-gray-700">各人格维度发展较为均衡，无明显突出优势</p>
+                    </div>
                   )}
 
                   {/* 待提升方面 */}
-                  {results.weaknesses.length > 0 && (
+                  {results.weaknesses && results.weaknesses.length > 0 ? (
                     <div>
                       <h4 className="font-medium text-orange-800 mb-2">⚠️ 待提升方面</h4>
                       <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
@@ -1723,10 +1942,15 @@ export default function ResultsPage() {
                         ))}
                       </ul>
                     </div>
+                  ) : (
+                    <div>
+                      <h4 className="font-medium text-orange-800 mb-2">⚠️ 待提升方面</h4>
+                      <p className="text-sm text-gray-700">各人格维度发展较为均衡，无明显待提升方面</p>
+                    </div>
                   )}
 
                   {/* 职业建议 */}
-                  {results.recommendations.length > 0 && (
+                  {results.recommendations && results.recommendations.length > 0 ? (
                     <div>
                       <h4 className="font-medium text-blue-800 mb-2">💼 职业建议</h4>
                       <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
@@ -1734,6 +1958,11 @@ export default function ResultsPage() {
                           <li key={index}>{recommendation}</li>
                         ))}
                       </ul>
+                    </div>
+                  ) : (
+                    <div>
+                      <h4 className="font-medium text-blue-800 mb-2">💼 职业建议</h4>
+                      <p className="text-sm text-gray-700">建议根据具体岗位要求和候选人专业技能进行综合评估</p>
                     </div>
                   )}
                 </div>
