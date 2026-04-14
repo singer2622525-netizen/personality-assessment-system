@@ -157,6 +157,13 @@ npm start
 3. 配置反向代理（如Nginx）
 4. 配置HTTPS证书
 
+## 经验教训与故障复盘（唯一维护处）
+
+搬迁、Tunnel、standalone 部署、数据库与 API 字段等踩坑的**完整复盘**只维护在知识库，不在本项目重复撰写：
+
+- 复盘全文：`/Users/a1/Documents/Projects/cursor/03-knowledge-base/failure-cases/personality-assessment-deployment-2026-04.md`
+- 案例索引：`/Users/a1/Documents/Projects/cursor/03-knowledge-base/failure-cases/README.md`
+
 ## 维护和更新
 
 ### 定期维护
