@@ -18,6 +18,12 @@ import {
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
+function coerceSessionStatus(v: unknown): AssessmentSession['status'] {
+  const s = String(v ?? '')
+  if (s === 'completed' || s === 'in_progress' || s === 'pending') return s
+  return 'pending'
+}
+
 export default function AdminDashboard() {
   const router = useRouter()
   const [sessions, setSessions] = useState<AssessmentSession[]>([])
@@ -63,11 +69,11 @@ export default function AdminDashboard() {
       // 转换为AssessmentSession格式
       const formattedSessions: AssessmentSession[] = allSessions.map((s: any) => ({
         id: s.id,
-        candidateName: s.candidateName,
-        candidateEmail: s.candidateEmail,
-        candidatePhone: s.candidatePhone,
-        position: s.position,
-        status: s.status,
+        candidateName: s.candidateName != null ? String(s.candidateName) : '',
+        candidateEmail: s.candidateEmail != null ? String(s.candidateEmail) : '',
+        candidatePhone: s.candidatePhone != null ? String(s.candidatePhone) : '',
+        position: s.position != null ? String(s.position) : '',
+        status: coerceSessionStatus(s.status),
         answers: s.answers || [],
         results: s.results || undefined,
         createdAt: new Date(s.createdAt),
@@ -84,14 +90,14 @@ export default function AdminDashboard() {
     }
   }
 
-  const filteredSessions = sessions.filter(session => {
-    // 防御性编程：处理可能的 undefined 值
-    const candidateName = session.candidateName || ''
-    const candidateEmail = session.candidateEmail || ''
-    const candidatePhone = session.candidatePhone || ''
-
-    const matchesSearch = candidateName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      candidateEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredSessions = sessions.filter((session) => {
+    const candidateName = String(session.candidateName ?? '')
+    const candidateEmail = String(session.candidateEmail ?? '')
+    const candidatePhone = String(session.candidatePhone ?? '')
+    const q = String(searchTerm ?? '').toLowerCase()
+    const matchesSearch =
+      candidateName.toLowerCase().includes(q) ||
+      candidateEmail.toLowerCase().includes(q) ||
       candidatePhone.includes(searchTerm)
     const matchesFilter = filterStatus === 'all' || session.status === filterStatus
     return matchesSearch && matchesFilter
