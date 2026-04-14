@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/db'
 import { generateUniqueId } from '@/lib/utils'
-import { calculatePersonalityScores } from '@/lib/assessment'
+
+function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
+  if (value == null || value === '') return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
 
 // 创建会话
 export async function POST(request: NextRequest) {
@@ -64,7 +72,7 @@ export async function GET(request: NextRequest) {
       ORDER BY created_at DESC
     `).all()
 
-    // 解析JSON字段并转换为驼峰命名
+    // 解析 JSON 并统一驼峰命名（禁止 ...session 直接透出 snake_case，否则前端列表候选人空白）
     const parsedSessions = sessions.map((session: any) => ({
       id: session.id,
       uniqueId: session.unique_id,
@@ -73,8 +81,8 @@ export async function GET(request: NextRequest) {
       candidatePhone: session.candidate_phone,
       position: session.position,
       status: session.status,
-      answers: session.answers ? JSON.parse(session.answers) : [],
-      results: session.results ? JSON.parse(session.results) : null,
+      answers: safeJsonParse(session.answers, [] as unknown[]),
+      results: safeJsonParse(session.results, null as unknown | null),
       createdAt: session.created_at,
       completedAt: session.completed_at || null,
     }))

@@ -60,6 +60,27 @@ export async function apiRequest<T>(
   }
 }
 
+/** 后端若直接展开 SQL 行会带 snake_case；统一为前端使用的 camelCase，避免列表/统计空白 */
+export function normalizeSessionFromApi(raw: Record<string, unknown> | null | undefined) {
+  if (!raw || typeof raw !== 'object') {
+    return raw as any
+  }
+  const r = raw as Record<string, unknown>
+  return {
+    id: r.id,
+    uniqueId: (r.uniqueId ?? r.unique_id ?? '') as string,
+    candidateName: (r.candidateName ?? r.candidate_name ?? '') as string,
+    candidateEmail: (r.candidateEmail ?? r.candidate_email ?? '') as string,
+    candidatePhone: (r.candidatePhone ?? r.candidate_phone ?? '') as string,
+    position: (r.position ?? '') as string,
+    status: r.status,
+    answers: (r.answers as unknown[]) ?? [],
+    results: (r.results as unknown) ?? null,
+    createdAt: (r.createdAt ?? r.created_at) as string,
+    completedAt: (r.completedAt ?? r.completed_at ?? null) as string | null,
+  }
+}
+
 // 会话相关API
 export const sessionApi = {
   // 创建会话
@@ -77,7 +98,8 @@ export const sessionApi = {
 
   // 获取会话
   get: async (sessionId: string) => {
-    return apiRequest<any>(`/sessions/${sessionId}`)
+    const row = await apiRequest<Record<string, unknown>>(`/sessions/${sessionId}`)
+    return normalizeSessionFromApi(row)
   },
 
   // 更新会话
@@ -106,7 +128,9 @@ export const sessionApi = {
 
   // 获取所有会话（管理员）
   getAll: async () => {
-    return apiRequest<any[]>('/sessions')
+    const rows = await apiRequest<Record<string, unknown>[]>('/sessions')
+    if (!Array.isArray(rows)) return []
+    return rows.map((row) => normalizeSessionFromApi(row))
   },
 }
 

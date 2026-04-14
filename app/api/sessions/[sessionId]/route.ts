@@ -1,6 +1,15 @@
 import { getDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
+function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
+  if (value == null || value === '') return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
 // 获取单个会话
 export async function GET(
   request: NextRequest,
@@ -42,8 +51,8 @@ export async function GET(
       candidatePhone: (session as any).candidate_phone,
       position: (session as any).position,
       status: (session as any).status,
-      answers: (session as any).answers ? JSON.parse((session as any).answers) : [],
-      results: (session as any).results ? JSON.parse((session as any).results) : null,
+      answers: safeJsonParse((session as any).answers, [] as unknown[]),
+      results: safeJsonParse((session as any).results, null as unknown | null),
       createdAt: (session as any).created_at,
       completedAt: (session as any).completed_at || null,
     }
